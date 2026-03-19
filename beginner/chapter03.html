@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 初級編 ― 第3章：アプリを作ろう</title>
+<style>
+/* ===== リセット・基本 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9; }
+.page-wrapper { max-width: 960px; margin: 0 auto; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh; }
+
+/* ===== ヘッダー ===== */
+.site-header { background: linear-gradient(135deg, #1a56a0 0%, #2874c4 100%); color: #fff; padding: 28px 40px 24px; }
+.site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+.site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+.site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+/* ===== パンくず ===== */
+.breadcrumb { background: #e9eef5; padding: 10px 40px; font-size: 13px; color: #666; }
+.breadcrumb a { color: #1a56a0; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+/* ===== コンテンツ ===== */
+.content { padding: 36px 40px 60px; }
+
+/* ===== 章タイトル ===== */
+.chapter-title-block { background: linear-gradient(135deg, #eaf1fa 0%, #f5f8fc 100%); border: 1px solid #c8d8eb; border-radius: 10px; padding: 32px 36px; margin-bottom: 40px; text-align: center; }
+.chapter-number { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #1a56a0; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+.chapter-title-block h2 { font-size: 24px; color: #1a56a0; font-weight: 700; margin-bottom: 6px; }
+.chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+/* ===== 進捗バー ===== */
+.progress-bar-wrapper { margin-bottom: 36px; }
+.progress-steps { display: flex; justify-content: space-between; position: relative; }
+.progress-steps::before { content: ''; position: absolute; top: 16px; left: 24px; right: 24px; height: 3px; background: #d4dce8; z-index: 0; }
+.progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+.progress-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #d4dce8; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.progress-step.done .dot { background: #27ae60; }
+.progress-step.active .dot { background: #1a56a0; box-shadow: 0 0 0 4px rgba(26,86,160,.2); }
+.progress-step .label { font-size: 11px; color: #888; text-align: center; }
+.progress-step.active .label { color: #1a56a0; font-weight: 700; }
+.progress-step.done .label { color: #27ae60; }
+
+/* ===== 章内目次 ===== */
+.toc-box { border: 1px solid #c8d8eb; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+.toc-box-title { text-align: center; font-size: 17px; color: #1a56a0; font-weight: 700; margin-bottom: 20px; }
+.toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+.toc-list { list-style: none; }
+.toc-list li { border-bottom: 1px solid #eaeef4; }
+.toc-list li:last-child { border-bottom: none; }
+.toc-list a { display: flex; align-items: center; padding: 14px 12px; text-decoration: none; color: #333; transition: background .15s; border-radius: 6px; }
+.toc-list a:hover { background: #f0f5fb; }
+.toc-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #1a56a0; color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0; }
+.toc-text { flex: 1; font-size: 15px; }
+.toc-text strong { color: #1a56a0; }
+.toc-arrow { color: #1a56a0; font-size: 18px; margin-left: 8px; }
+
+/* ===== セクション見出し ===== */
+.section-heading { font-size: 21px; color: #1a56a0; font-weight: 700; margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #1a56a0; }
+.section-heading .sec-num { background: #1a56a0; color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; font-size: 15px; font-weight: 700; margin-right: 10px; vertical-align: middle; }
+
+/* ===== 小見出し ===== */
+.sub-heading { font-size: 17px; color: #2874c4; font-weight: 700; margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #2874c4; }
+
+/* ===== 段落 ===== */
+.content p { margin-bottom: 16px; }
+
+/* ===== 手順ステップ ===== */
+.procedure { background: #f8fafe; border: 1px solid #d4dce8; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+.proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #e4eaf2; }
+.proc-step:last-child { border-bottom: none; }
+.proc-num { width: 32px; height: 32px; background: #1a56a0; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.proc-body { flex: 1; }
+.proc-body p { margin-bottom: 4px; line-height: 1.6; }
+.proc-body p:last-child { margin-bottom: 0; }
+
+/* ===== テーブル ===== */
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+.data-table th { background: #1a56a0; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+.data-table td { padding: 10px 14px; border-bottom: 1px solid #e4eaf2; text-align: center; }
+.data-table tbody tr:hover { background: #f5f8fc; }
+.data-table.left-align td { text-align: left; }
+.data-table.left-align td:first-child { text-align: center; }
+
+/* ===== ボックス共通 ===== */
+.note-box, .warn-box, .point-box { border-radius: 8px; padding: 18px 22px; margin: 20px 0 28px; font-size: 14px; line-height: 1.75; }
+.note-box { background: #eafaf1; border: 1px solid #82d8a2; }
+.note-box::before { content: '📝 補足'; display: block; font-weight: 700; color: #27ae60; margin-bottom: 6px; }
+.warn-box { background: #fef9e7; border: 1px solid #f4d03f; }
+.warn-box::before { content: '⚠️ 注意'; display: block; font-weight: 700; color: #d4a017; margin-bottom: 6px; }
+.point-box { background: #eaf1fa; border: 1px solid #a3c4e9; }
+.point-box::before { content: '💡 POINT'; display: block; font-weight: 700; color: #1a56a0; margin-bottom: 6px; }
+
+    /* ============================================
+     共通：図（単体画像）
+     ============================================ */
+  .figure {
+    margin: 24px 0;
+    text-align: center;
+  }
+  .figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+  }
+  .figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 8px;
+  }
+
+  /* ============================================
+     共通：図（複数画像 2列グリッド）
+     ============================================ */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .preview-figure {
+    background: #f8fafc;
+    border: 1px solid #d4dce8;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 0;
+    text-align: center;
+  }
+  .preview-figure img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+    margin-bottom: 10px;
+  }
+  .preview-figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+
+/* ===== 概念図：カラム型変更フロー（横並び固定） ===== */
+.type-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 28px 0 32px;
+  padding: 28px 16px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #eaf1fa 100%);
+  border: 1px solid #c8d8eb;
+  border-radius: 12px;
+  /* flex-wrap を削除して折り返さない */
+}
+.type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+}
+.type-icon {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,.1);
+  color: #fff;
+  flex-shrink: 0;
+}
+.type-icon.auto    { background: linear-gradient(135deg, #8e8e8e, #b0b0b0); }
+.type-icon.check   { background: linear-gradient(135deg, #e67e22, #f39c12); }
+.type-icon.correct { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+.type-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+.type-sub   { font-size: 11.5px; color: #888; line-height: 1.5; }
+
+/* 矢印（横向き・SVG使用で崩れない） */
+.type-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 6px;
+}
+.type-arrow svg {
+  display: block;
+}
+.type-arrow .arrow-text {
+  font-size: 10px;
+  color: #1a56a0;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+/* ===== Ref概念図（横並び固定） ===== */
+.ref-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 28px 0 32px;
+  padding: 28px 20px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #eaf1fa 100%);
+  border: 1px solid #c8d8eb;
+  border-radius: 12px;
+  /* flex-wrap を入れない → 折り返さない */
+}
+.ref-table-box {
+  background: #fff;
+  border: 2px solid #1a56a0;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  box-shadow: 0 3px 10px rgba(26,86,160,.1);
+}
+.ref-table-box .ref-table-header {
+  background: #1a56a0; color: #fff;
+  text-align: center; font-weight: 700;
+  font-size: 14px; padding: 8px 16px;
+}
+.ref-table-box .ref-table-body {
+  padding: 12px 16px; font-size: 13px; line-height: 1.8;
+}
+.ref-table-box .ref-table-body .ref-key { color: #e74c3c; font-weight: 700; }
+.ref-table-box .ref-table-body .ref-col { color: #1a56a0; font-weight: 700; }
+
+/* 矢印（SVGで崩れない） */
+.ref-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 12px;
+}
+.ref-connector .conn-label {
+  font-size: 11px;
+  color: #e74c3c;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+/* ===== カラム型設定テーブル（色付き） ===== */
+.type-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #fff; }
+.type-badge.text { background: #3498db; }
+.type-badge.name { background: #2ecc71; }
+.type-badge.number { background: #e67e22; }
+.type-badge.date { background: #9b59b6; }
+.type-badge.image { background: #1abc9c; }
+.type-badge.enum { background: #e74c3c; }
+.type-badge.ref { background: #c0392b; }
+
+/* ===== INITIAL VALUE ハイライト ===== */
+.initial-value-badge { display: inline-block; background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; margin-left: 4px; }
+code { background: #f0f3f8; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 13px; color: #c0392b; }
+
+/* ===== ページナビ ===== */
+.page-nav { display: flex; justify-content: space-between; margin-top: 52px; padding-top: 24px; border-top: 2px solid #e4eaf2; }
+.page-nav a { display: inline-block; padding: 12px 24px; background: #1a56a0; color: #fff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 700; transition: background .2s; }
+.page-nav a:hover { background: #15437a; }
+.page-nav a.disabled { background: #ccc; pointer-events: none; }
+
+/* ===== フッター ===== */
+.site-footer { background: #2c3e50; color: rgba(255,255,255,.7); text-align: center; padding: 20px 40px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 初級編 <small>～ ノーコードで業務アプリを作ろう ～</small></h1>
+  </header>
+
+  <!-- ===== パンくず ===== -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a><span class="sep">▸</span>
+    <a href="../index.html">初級編</a><span class="sep">▸</span>
+    <strong>第3章：アプリを作ろう</strong>
+  </nav>
+
+  <!-- ===== コンテンツ ===== -->
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">3</div>
+      <h2>第3章：アプリを作ろう</h2>
+      <p class="chapter-sub">スプレッドシートからアプリを生成し、データの設定を整えます</p>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">1</div><span class="label">知ろう</span></div>
+        <div class="progress-step done"><div class="dot">2</div><span class="label">準備</span></div>
+        <div class="progress-step active"><div class="dot">3</div><span class="label">作ろう</span></div>
+        <div class="progress-step"><div class="dot">4</div><span class="label">画面</span></div>
+        <div class="progress-step"><div class="dot">5</div><span class="label">便利機能</span></div>
+        <div class="progress-step"><div class="dot">6</div><span class="label">公開</span></div>
+        <div class="progress-step"><div class="dot">7</div><span class="label">トラブル</span></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">この章で学ぶこと <span class="sub">─ 所要時間：約40分</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec3-1"><span class="toc-num">3-1</span><span class="toc-text"><strong>スプレッドシートからアプリを作成する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec3-2"><span class="toc-num">3-2</span><span class="toc-text"><strong>テーブルの確認と設定</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec3-3"><span class="toc-num">3-3</span><span class="toc-text"><strong>カラム型（データ型）を理解して修正する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec3-4"><span class="toc-num">3-4</span><span class="toc-text"><strong>Ref（リレーション）でテーブルを連携させる</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec3-5"><span class="toc-num">3-5</span><span class="toc-text"><strong>Virtual Column（仮想列）を確認する</strong></span><span class="toc-arrow">▸</span></a></li>
+      </ul>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 3-1 スプレッドシートからアプリを作成する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-1">
+      <span class="sec-num">3-1</span> スプレッドシートからアプリを作成する
+    </h3>
+
+    <p>第2章で作成したGoogleスプレッドシートを使って、AppSheetアプリを自動生成します。プログラミングは一切不要で、数クリックでアプリの雛形が完成します。</p>
+
+    <h4 class="sub-heading">■ 方法A：スプレッドシートから直接作成（推奨）</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>第2章で作成した <strong>Googleスプレッドシート</strong>（備品管理アプリ_データ）を開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>メニューバーの <strong>「拡張機能」</strong> → <strong>「AppSheet」</strong> → <strong>「アプリを作成」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>自動的にAppSheetエディタが開き、スプレッドシートのデータが取り込まれたアプリが生成されます。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch03-01-01.png"
+       alt="スプレッドシートのメニュー「拡張機能 > AppSheet > アプリを作成」を選択している画面"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-1-1：スプレッドシートからAppSheetアプリを作成</figcaption>
+</figure>
+
+    <h4 class="sub-heading">■ 方法B：AppSheetサイトから作成</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><a href="https://www.appsheet.com" target="_blank">https://www.appsheet.com</a> にアクセスし、<strong>「My apps」</strong> を開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「+ Create」</strong> → <strong>「App」</strong> → <strong>「Start with existing data」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>アプリ名に <strong>「備品管理アプリ」</strong> と入力し、データソースとして <strong>Google Sheets</strong> を選択してスプレッドシートを指定します。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch03-01-02.png"
+       alt="AppSheetサイトでの「Create > App > Start with existing data」画面"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-1-2：AppSheetサイトからアプリを作成</figcaption>
+</figure>
+
+
+    <div class="point-box">
+      方法Aが最も簡単です。スプレッドシートを開いた状態から直接AppSheetに接続されるため、データソースの指定ミスも防げます。本マニュアルでは<strong>方法Aを推奨</strong>します。
+    </div>
+
+    <div class="warn-box">
+      アプリを作成すると、Googleドライブの同じフォルダ内に <strong>「appsheet」</strong> という名前のフォルダが自動作成されます。この中にアプリの設定ファイルが保存されるため、<strong>削除しないでください</strong>。
+    </div>
+
+<!-- ============================================================ -->
+<!-- 3-2 テーブルの確認と追加 -->
+<!-- ============================================================ -->
+<h3 class="section-heading" id="sec3-2">
+  <span class="sec-num">3-2</span> テーブルの確認と追加
+</h3>
+
+<p>アプリが作成されると、スプレッドシートの <strong>最初のシート</strong> がテーブルとして自動取り込みされます。ここでは取り込まれたテーブルを確認し、2つ目のテーブル「貸出履歴」を追加します。</p>
+
+<h4 class="sub-heading">■ テーブルの確認</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p>AppSheetエディタの左ナビゲーションから <strong>「Data」</strong> をクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p>左側のテーブル一覧に <strong>「備品一覧」</strong> が表示されていることを確認します。</p>
+    </div>
+  </div>
+</div>
+
+<figure class="figure">
+  <img src="images/ch03-02-01.png"
+       alt="AppSheetエディタ > Data画面で「備品一覧」テーブルのみが表示されている状態"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-2-1：Dataメニューでテーブルを確認</figcaption>
+</figure>
+
+
+<div class="note-box">
+  既にテーブル一覧に <strong>「備品一覧」と「貸出履歴」の2つ</strong> が表示されている場合は、以下の追加手順はスキップして <a href="#sec3-2-setting">「テーブルの基本設定」</a> に進んでください。
+</div>
+
+<h4 class="sub-heading">■ 「貸出履歴」テーブルを追加する</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p>Data画面の左上にある <strong>「+」（Add new table）</strong> ボタンをクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p><strong>「Google Sheets」</strong> を選択します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">3</div>
+    <div class="proc-body">
+      <p>同じスプレッドシート内の <strong>「貸出履歴」</strong> シートを選択して <strong>「Add」</strong> をクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">4</div>
+    <div class="proc-body">
+      <p>左側のテーブル一覧に <strong>「備品一覧」と「貸出履歴」の2つ</strong> が表示されていればOKです。</p>
+    </div>
+  </div>
+</div>
+
+<figure class="figure">
+  <img src="images/ch03-02-02.png"
+       alt="「+」ボタンから「Google Sheets」を選択し、「貸出履歴」シートを追加する画面"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-2-2：「貸出履歴」テーブルの追加</figcaption>
+</figure>
+
+<!-- 解像度アップ（見た目シャープ化） -->
+<figure class="figure">
+  <img src="images/ch03-02-03.png"
+       alt="2つのテーブルが追加された状態"
+       style="width:60%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-2-3：2つのテーブルが追加された状態</figcaption>
+</figure>
+
+<figure class="figure">
+  <div class="img-placeholder">
+    <span class="icon-large">🖼️</span>
+    テーブル一覧に「備品一覧」と「貸出履歴」の2つが表示されている状態<br>
+    <span class="file-name">ch03-02-03.png</span>
+  </div>
+  <figcaption>図3-2-3：2つのテーブルが追加された状態</figcaption>
+</figure>
+
+<h4 class="sub-heading" id="sec3-2-setting">■ テーブルの基本設定</h4>
+
+<p>各テーブルにはいくつかの基本設定があります。以下の項目を確認しましょう。</p>
+
+<table class="data-table left-align">
+  <thead>
+    <tr><th style="width:160px;">設定項目</th><th>説明</th><th style="width:180px;">備品一覧の設定</th></tr>
+  </thead>
+  <tbody>
+    <tr><td style="text-align:left;">Table Name</td><td>テーブルの表示名</td><td>備品一覧</td></tr>
+    <tr><td style="text-align:left;">Data Source</td><td>データの保存先（変更不要）</td><td>Google Sheets</td></tr>
+    <tr><td style="text-align:left;">Are updates allowed?</td><td>データの追加・更新・削除を許可するか</td><td>すべて ON</td></tr>
+  </tbody>
+</table>
+
+<div class="point-box">
+  <strong>「Are updates allowed?」</strong> の設定は、「Adds」（追加）「Deletes」（削除）「Updates」（更新）「Read-Only」（読み取り専用）の切り替えがあります。初級編ではすべてONのままで構いません。
+</div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-3 カラム型（データ型）を理解して修正する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-3">
+      <span class="sec-num">3-3</span> カラム型（データ型）を理解して修正する
+    </h3>
+
+    <p>AppSheetがスプレッドシートを取り込む際、各列の <strong>データ型（Type）</strong> を自動推測します。しかし、推測が正しくない場合があるため、手動で確認・修正する必要があります。</p>
+
+    <!-- 概念図 -->
+    <div class="type-flow">
+      <div class="type-card">
+        <div class="type-icon auto">🤖</div>
+        <div class="type-label">自動推測</div>
+        <div class="type-sub">AppSheetが<br>データ型を推測</div>
+      </div>
+
+      <div class="type-arrow">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="0" y1="10" x2="48" y2="10" stroke="#1a56a0" stroke-width="3"/>
+          <polygon points="48,4 60,10 48,16" fill="#1a56a0"/>
+        </svg>
+        <span class="arrow-text">確認</span>
+      </div>
+
+      <div class="type-card">
+        <div class="type-icon check">🔍</div>
+        <div class="type-label">型の確認</div>
+        <div class="type-sub">意図通りか<br>チェック</div>
+      </div>
+
+      <div class="type-arrow">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="0" y1="10" x2="48" y2="10" stroke="#1a56a0" stroke-width="3"/>
+          <polygon points="48,4 60,10 48,16" fill="#1a56a0"/>
+        </svg>
+        <span class="arrow-text">修正</span>
+      </div>
+
+      <div class="type-card">
+        <div class="type-icon correct">✅</div>
+        <div class="type-label">型の修正</div>
+        <div class="type-sub">正しい型に<br>変更・保存</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ よく使うデータ型一覧</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:130px;">データ型</th><th>説明</th><th style="width:180px;">使用例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><span class="type-badge text">Text</span></td><td>1行のテキスト（短い文字列）</td><td>備品ID、備品名</td></tr>
+        <tr><td><span class="type-badge name">Name</span></td><td>人物の名前を表すテキスト</td><td>貸出者</td></tr>
+        <tr><td><span class="type-badge number">Number</span></td><td>数値（整数）</td><td>数量</td></tr>
+        <tr><td><span class="type-badge date">Date</span></td><td>日付（年/月/日）</td><td>購入日、貸出日</td></tr>
+        <tr><td><span class="type-badge image">Image</span></td><td>画像ファイル</td><td>備品の写真</td></tr>
+        <tr><td><span class="type-badge enum">Enum</span></td><td>選択肢（1つだけ選択）</td><td>カテゴリ、ステータス</td></tr>
+        <tr><td><span class="type-badge ref">Ref</span></td><td>他テーブルへの参照（リレーション）</td><td>貸出履歴の備品ID</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 「備品一覧」テーブルのカラム型を設定する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → <strong>「備品一覧」</strong> テーブルをクリックして、カラム一覧を表示します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>以下の表の通りに各カラムの <strong>TYPE</strong> が設定されているか確認し、異なる場合は修正します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>TYPE を変更するには、カラム名の横にある <strong>TYPE のドロップダウン</strong> をクリックし、正しい型を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>すべて設定したら、右上の <strong>「Save」</strong> ボタンをクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <p><strong>「備品一覧」テーブル ─ カラム型設定表</strong></p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:140px;">カラム名</th>
+          <th style="width:110px;">設定するTYPE</th>
+          <th style="width:80px;">KEY</th>
+          <th style="width:80px;">LABEL</th>
+          <th>補足</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">備品ID</td><td><span class="type-badge text">Text</span></td><td>✅ ON</td><td>—</td><td>一意のID。自動でKEYに設定される場合が多い</td></tr>
+        <tr><td style="text-align:left;">備品名</td><td><span class="type-badge text">Text</span></td><td>—</td><td>✅ ON</td><td>LABELに設定すると各行の表示名になる</td></tr>
+        <tr><td style="text-align:left;">カテゴリ</td><td><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td>選択肢が自動で生成される</td></tr>
+        <tr><td style="text-align:left;">設置場所</td><td><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td>選択肢が自動で生成される</td></tr>
+        <tr><td style="text-align:left;">数量</td><td><span class="type-badge number">Number</span></td><td>—</td><td>—</td><td>整数値</td></tr>
+        <tr><td style="text-align:left;">購入日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>日付型</td></tr>
+        <tr><td style="text-align:left;">画像</td><td><span class="type-badge image">Image</span></td><td>—</td><td>—</td><td>空欄でもOK。アプリから写真を撮影して追加可能</td></tr>
+        <tr><td style="text-align:left;">ステータス</td><td><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td>「在庫あり」「使用中」など</td></tr>
+      </tbody>
+    </table>
+
+<figure class="figure">
+  <img src="images/ch03-03-01.png"
+       alt="「備品一覧」テーブルのカラム一覧で、各カラムのTYPEを設定した状態"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-3-1：「備品一覧」テーブルのカラム型設定</figcaption>
+</figure>
+   
+
+    <h4 class="sub-heading">■ 「貸出履歴」テーブルのカラム型を設定する</h4>
+
+    <p>同様に「貸出履歴」テーブルのカラム型を確認・修正します。</p>
+
+    <p><strong>「貸出履歴」テーブル ─ カラム型設定表</strong></p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:140px;">カラム名</th>
+          <th style="width:110px;">設定するTYPE</th>
+          <th style="width:80px;">KEY</th>
+          <th style="width:80px;">LABEL</th>
+          <th>補足</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">貸出ID</td><td><span class="type-badge text">Text</span></td><td>✅ ON</td><td>✅ ON</td><td>一意のID。KEYとLABELの両方を設定 <span class="initial-value-badge">INITIAL VALUE 設定必須</span></td></tr>
+        <tr><td style="text-align:left;">備品ID</td><td><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td>⭐ 次のセクション3-4で設定</td></tr>
+        <tr><td style="text-align:left;">貸出者</td><td><span class="type-badge name">Name</span></td><td>—</td><td>—</td><td>人物名</td></tr>
+        <tr><td style="text-align:left;">貸出日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>日付型</td></tr>
+        <tr><td style="text-align:left;">返却予定日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>日付型</td></tr>
+        <tr><td style="text-align:left;">返却日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>空欄 = 未返却</td></tr>
+        <tr><td style="text-align:left;">メモ</td><td><span class="type-badge text">Text</span></td><td>—</td><td>—</td><td>備考欄</td></tr>
+      </tbody>
+    </table>
+
+    <!-- ★★★ 追加セクション：貸出IDのInitial Value設定 ★★★ -->
+    <h4 class="sub-heading">■ 貸出IDの Initial value を設定する（重要）</h4>
+
+    <p>貸出履歴テーブルの「貸出ID」はキー列（KEY）です。第5章で作成する「貸出登録Action」では、備品一覧から貸出履歴テーブルに新しい行を自動追加しますが、AppSheetの仕様として <strong>キー列の値はAction内で設定できません</strong>。そのため、Initial value（初期値）を設定して、新しい行が追加されるたびに一意のIDが自動生成されるようにします。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → <strong>「貸出履歴」</strong> テーブルをクリックして、カラム一覧を表示します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「貸出ID」</strong> カラムの行にある <strong>鉛筆マーク（✏️ Edit）</strong> をクリックして、カラム詳細設定パネルを開きます。</p>
+          <p style="font-size:13px; color:#666;">※ カラム名の右端にある小さな鉛筆アイコンです。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>詳細設定パネル内を下にスクロールし、<strong>「Initial value」</strong> の入力欄に以下の関数を入力します。</p>
+          <p style="margin-top:8px;"><code>UNIQUEID()</code></p>
+          <p style="font-size:13px; color:#666;">※ 大文字・小文字を正確に入力してください。括弧 () も必要です。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>「Save」</strong> ボタンをクリックして保存します。ボタンが <strong>青色 → 灰色</strong> に変わったら保存完了です。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-03-02.png"
+           alt="貸出IDカラムの鉛筆マーク（Edit）の位置"
+           style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図3-3-2：「貸出ID」行の鉛筆マーク（Edit）をクリックして詳細設定を開く</figcaption>
+    </figure>
+
+<figure class="figure">
+  <img src="images/ch03-03-03.png"
+       alt="「貸出ID」カラムの詳細設定画面で、Initial value に UNIQUEID() を入力した状態"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-3-3：貸出IDの Initial value 設定</figcaption>
+</figure>
+
+    <div class="warn-box">
+      <strong>この設定を忘れると、第5章の「貸出登録Action」で行が追加されません。</strong><br>
+      AppSheetの仕様上、「Data: add a new row to another table」アクションではキー列の値を設定できないため、キー列には必ず Initial value で自動生成の仕組みを入れておく必要があります。
+    </div>
+
+    <div class="point-box">
+      <strong>UNIQUEID() とは？</strong><br>
+      AppSheetの関数で、8桁のランダムな英数字（例：<code>a1b2c3d4</code>）を生成します。スプレッドシート上のサンプルデータ（L001, L002…）とは形式が異なりますが、一意性が保証されるため、アプリからの自動登録に適しています。既存のサンプルデータはそのまま残して問題ありません。
+    </div>
+    <!-- ★★★ 追加セクション ここまで ★★★ -->
+
+
+    <div class="warn-box">
+      カラム型を変更したら、必ず右上の <strong>「Save」ボタン</strong> を押してください。保存しないと変更が反映されません。
+    </div>
+
+    <div class="point-box">
+      <strong>KEY</strong> とは、テーブル内の各行を一意に識別するための列です。「備品ID」「貸出ID」のように重複しない値を持つ列を指定します。<br>
+      <strong>LABEL</strong> とは、アプリ上で各行を表示する際の「名前」となる列です。「備品名」をLABELにすると、一覧画面で「ノートPC（Dell Latitude）」のように表示されます。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-4 Ref（リレーション）でテーブルを連携させる -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-4">
+      <span class="sec-num">3-4</span> Ref（リレーション）でテーブルを連携させる
+    </h3>
+
+    <p>「貸出履歴」テーブルの「備品ID」列を <strong>Ref型</strong> に設定することで、「備品一覧」テーブルとの <strong>リレーション（関連付け）</strong> を作成します。これにより、貸出データから備品の詳細情報を参照できるようになります。</p>
+
+    <!-- Ref概念図 -->
+        <div class="ref-diagram">
+      <div class="ref-table-box">
+        <div class="ref-table-header">📦 備品一覧</div>
+        <div class="ref-table-body">
+          <span class="ref-key">備品ID（KEY）</span><br>
+          備品名（LABEL）<br>
+          カテゴリ / 設置場所 / 数量 …
+        </div>
+      </div>
+
+      <div class="ref-connector">
+        <svg width="80" height="20" viewBox="0 0 80 20">
+          <line x1="8" y1="10" x2="72" y2="10" stroke="#e74c3c" stroke-width="3"/>
+          <polygon points="72,4 80,10 72,16" fill="#e74c3c"/>
+          <polygon points="8,4 0,10 8,16" fill="#e74c3c"/>
+        </svg>
+        <span class="conn-label">Ref で参照</span>
+      </div>
+
+      <div class="ref-table-box">
+        <div class="ref-table-header">📋 貸出履歴</div>
+        <div class="ref-table-body">
+          貸出ID（KEY）<span style="font-size:11px; color:#856404;">← UNIQUEID()で自動生成</span><br>
+          <span class="ref-col">備品ID → Ref（備品一覧）</span><br>
+          貸出者 / 貸出日 / 返却日 …
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ Refの設定手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → <strong>「貸出履歴」</strong> テーブルをクリックして、カラム一覧を表示します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「備品ID」</strong> カラムの <strong>TYPE</strong> をクリックし、ドロップダウンから <strong>「Ref」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>「Source table」</strong>（参照先テーブル）のドロップダウンが表示されるので、<strong>「備品一覧」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>設定が完了したら <strong>「Done」</strong> をクリックし、右上の <strong>「Save」</strong> ボタンで保存します。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch03-04-01.png"
+       alt="「貸出履歴」テーブルの「備品ID」カラムでTYPE = Ref、Source table = 備品一覧を選択している画面"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-4-1：Ref型の設定画面</figcaption>
+</figure>
+
+   
+    <div class="point-box">
+  <strong>Refを設定するメリット：</strong><br>
+  ・貸出履歴の入力画面で「備品ID」が <strong>ドロップダウンリスト</strong> になり、備品一覧から選択できるようになります。<br>
+  ・備品の詳細画面から、その備品の <strong>貸出履歴を自動的に一覧表示</strong> できるようになります。<br>
+  ・貸出履歴画面から <strong>ワンタップで備品の詳細画面に遷移</strong> できるようになります。
+</div>
+
+<div class="note-box">
+  ドロップダウンに「B001」のようなIDではなく <strong>「ノートPC（Dell Latitude）」</strong> のような名前を表示させたい場合は、「備品一覧」テーブルの <strong>「備品名」カラムをLABELに設定</strong> してください（3-3で設定済み）。実際の動作は第4章でビューを設定した後にプレビューで確認できます。
+</div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-5 Virtual Column（仮想列）を確認する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-5">
+      <span class="sec-num">3-5</span> Virtual Column（仮想列）を確認する
+    </h3>
+
+    <p>Ref（リレーション）を設定すると、AppSheetが自動的に <strong>Virtual Column（仮想列）</strong> を作成します。仮想列は、スプレッドシートには存在せず、AppSheet内でのみ使われる計算用の列です。</p>
+
+    <h4 class="sub-heading">■ 自動作成されるVirtual Column</h4>
+
+    <p>3-4でRefを設定した結果、「備品一覧」テーブルに以下のような仮想列が自動で追加されます。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:200px;">仮想列名（例）</th>
+          <th style="width:100px;">種類</th>
+          <th>説明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">貸出履歴（Related 貸出履歴s）</td><td>REF_ROWS</td><td>この備品に紐づく貸出履歴の一覧。備品の詳細画面で貸出履歴がインラインで表示される</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Virtual Columnの確認手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → <strong>「備品一覧」</strong> テーブルのカラム一覧を表示します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>カラム一覧の下部に、名前の横に <strong>「Virtual」</strong> と表示された列があることを確認します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>この仮想列をクリックすると、<strong>App formula</strong> に <code>REF_ROWS("貸出履歴", "備品ID")</code> のような式が設定されていることが確認できます。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch03-05-01.png"
+       alt="「備品一覧」テーブルのカラム一覧でVirtual Columnが表示されている画面"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図3-5-1：Virtual Column（仮想列）の確認</figcaption>
+</figure>
+
+    <div class="point-box">
+      Virtual Columnは自動生成されるため、この段階では特に編集する必要はありません。第4章でビューを設定する際に、備品の詳細画面で貸出履歴が <strong>自動的にインライン表示</strong> される仕組みに活用されます。
+    </div>
+
+    <div class="note-box">
+      Virtual Columnはスプレッドシートには書き込まれません。あくまでAppSheet内の計算結果として表示されるだけです。そのため、スプレッドシートを直接開いても仮想列は見えません。
+    </div>
+
+    <!-- ===== 第3章まとめ ===== -->
+    <h4 class="sub-heading">■ 第3章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:220px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">スプレッドシートからアプリ作成</td><td>「拡張機能 > AppSheet > アプリを作成」が最も簡単</td></tr>
+        <tr><td>2</td><td style="text-align:left;">テーブルの確認と設定</td><td>2つのテーブルが取り込まれたことを確認</td></tr>
+        <tr><td>3</td><td style="text-align:left;">カラム型の確認・修正</td><td>自動推測を確認し、Enum / Date / Image 等に修正</td></tr>
+        <tr><td>4</td><td style="text-align:left;">貸出IDの Initial value 設定</td><td>Initial value に <code>UNIQUEID()</code> を設定（第5章の前提）</td></tr>
+        <tr><td>5</td><td style="text-align:left;">Refでテーブル連携</td><td>貸出履歴の備品ID → 備品一覧をRef参照</td></tr>
+        <tr><td>6</td><td style="text-align:left;">Virtual Columnの確認</td><td>Ref設定で自動生成される逆参照列を確認</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      次の章に進む前に、エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ===== ページナビ ===== -->
+    <nav class="page-nav">
+      <a href="chapter02.html">← 第2章：準備しよう</a>
+      <a href="chapter04.html">第4章：画面を整えよう →</a>
+    </nav>
+
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="site-footer">
+    AppSheet 初級編 マニュアル ─ 社内限定 ─ 最終更新：2026年3月
+  </footer>
+
+</div>
+</body>
+</html>
