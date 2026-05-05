@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 初級編 ― 第7章：困ったときは</title>
+<style>
+/* ===== リセット・基本 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9; }
+.page-wrapper { max-width: 960px; margin: 0 auto; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh; }
+
+/* ===== ヘッダー ===== */
+.site-header { background: linear-gradient(135deg, #1a56a0 0%, #2874c4 100%); color: #fff; padding: 28px 40px 24px; }
+.site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+.site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+.site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+/* ===== パンくず ===== */
+.breadcrumb { background: #e9eef5; padding: 10px 40px; font-size: 13px; color: #666; }
+.breadcrumb a { color: #1a56a0; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+/* ===== コンテンツ ===== */
+.content { padding: 36px 40px 60px; }
+
+/* ===== 章タイトル ===== */
+.chapter-title-block { background: linear-gradient(135deg, #eaf1fa 0%, #f5f8fc 100%); border: 1px solid #c8d8eb; border-radius: 10px; padding: 32px 36px; margin-bottom: 40px; text-align: center; }
+.chapter-number { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #1a56a0; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+.chapter-title-block h2 { font-size: 24px; color: #1a56a0; font-weight: 700; margin-bottom: 6px; }
+.chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+/* ===== 進捗バー ===== */
+.progress-bar-wrapper { margin-bottom: 36px; }
+.progress-steps { display: flex; justify-content: space-between; position: relative; }
+.progress-steps::before { content: ''; position: absolute; top: 16px; left: 24px; right: 24px; height: 3px; background: #d4dce8; z-index: 0; }
+.progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+.progress-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #d4dce8; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.progress-step.done .dot { background: #27ae60; }
+.progress-step.active .dot { background: #1a56a0; box-shadow: 0 0 0 4px rgba(26,86,160,.2); }
+.progress-step .label { font-size: 11px; color: #888; text-align: center; }
+.progress-step.active .label { color: #1a56a0; font-weight: 700; }
+.progress-step.done .label { color: #27ae60; }
+
+/* ===== 章内目次 ===== */
+.toc-box { border: 1px solid #c8d8eb; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+.toc-box-title { text-align: center; font-size: 17px; color: #1a56a0; font-weight: 700; margin-bottom: 20px; }
+.toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+.toc-list { list-style: none; }
+.toc-list li { border-bottom: 1px solid #eaeef4; }
+.toc-list li:last-child { border-bottom: none; }
+.toc-list a { display: flex; align-items: center; padding: 14px 12px; text-decoration: none; color: #333; transition: background .15s; border-radius: 6px; }
+.toc-list a:hover { background: #f0f5fb; }
+.toc-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #1a56a0; color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0; }
+.toc-text { flex: 1; font-size: 15px; }
+.toc-text strong { color: #1a56a0; }
+.toc-arrow { color: #1a56a0; font-size: 18px; margin-left: 8px; }
+
+/* ===== セクション見出し ===== */
+.section-heading { font-size: 21px; color: #1a56a0; font-weight: 700; margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #1a56a0; }
+.section-heading .sec-num { background: #1a56a0; color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; font-size: 15px; font-weight: 700; margin-right: 10px; vertical-align: middle; }
+
+/* ===== 小見出し ===== */
+.sub-heading { font-size: 17px; color: #2874c4; font-weight: 700; margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #2874c4; }
+
+/* ===== 段落 ===== */
+.content p { margin-bottom: 16px; }
+
+/* ===== 手順ステップ ===== */
+.procedure { background: #f8fafe; border: 1px solid #d4dce8; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+.proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #e4eaf2; }
+.proc-step:last-child { border-bottom: none; }
+.proc-num { width: 32px; height: 32px; background: #1a56a0; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.proc-body { flex: 1; }
+.proc-body p { margin-bottom: 4px; line-height: 1.6; }
+.proc-body p:last-child { margin-bottom: 0; }
+
+/* ===== テーブル ===== */
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+.data-table th { background: #1a56a0; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+.data-table td { padding: 10px 14px; border-bottom: 1px solid #e4eaf2; text-align: center; }
+.data-table tbody tr:hover { background: #f5f8fc; }
+.data-table.left-align td { text-align: left; }
+.data-table.left-align td:first-child { text-align: center; }
+
+/* ===== ボックス共通 ===== */
+.note-box, .warn-box, .point-box { border-radius: 8px; padding: 18px 22px; margin: 20px 0 28px; font-size: 14px; line-height: 1.75; }
+.note-box { background: #eafaf1; border: 1px solid #82d8a2; }
+.note-box::before { content: '📝 補足'; display: block; font-weight: 700; color: #27ae60; margin-bottom: 6px; }
+.warn-box { background: #fef9e7; border: 1px solid #f4d03f; }
+.warn-box::before { content: '⚠️ 注意'; display: block; font-weight: 700; color: #d4a017; margin-bottom: 6px; }
+.point-box { background: #eaf1fa; border: 1px solid #a3c4e9; }
+.point-box::before { content: '💡 POINT'; display: block; font-weight: 700; color: #1a56a0; margin-bottom: 6px; }
+
+    /* ============================================
+     共通：図（単体画像）
+     ============================================ */
+  .figure {
+    margin: 24px 0;
+    text-align: center;
+  }
+  .figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+  }
+  .figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 8px;
+  }
+    /* 部分スクリーンショット用（縮小してシャープ表示） */
+  .figure img.sharp {
+    width: 60%;
+    max-width: 480px;
+  }
+
+
+  /* ============================================
+     共通：図（複数画像 2列グリッド）
+     ============================================ */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .preview-figure {
+    background: #f8fafc;
+    border: 1px solid #d4dce8;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 0;
+    text-align: center;
+  }
+  .preview-figure img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+    margin-bottom: 10px;
+  }
+  .preview-figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+/* ===== 症状カード ===== */
+.symptom-card { border: 1px solid #d4dce8; border-radius: 10px; padding: 24px 28px; margin: 20px 0 28px; background: #fff; }
+.symptom-title { font-size: 16px; font-weight: 700; color: #c0392b; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #f5c6cb; }
+.cause-title { font-size: 15px; font-weight: 700; color: #d4a017; margin: 16px 0 8px; }
+.fix-title { font-size: 15px; font-weight: 700; color: #27ae60; margin: 16px 0 8px; }
+
+/* ===== チェックリスト ===== */
+.checklist { list-style: none; margin: 16px 0 24px; }
+.checklist li { padding: 10px 12px 10px 40px; position: relative; border-bottom: 1px solid #eaeef4; font-size: 14px; }
+.checklist li:last-child { border-bottom: none; }
+.checklist li::before { content: '☐'; position: absolute; left: 12px; top: 10px; color: #1a56a0; font-size: 16px; font-weight: 700; }
+
+/* ===== リンクカード ===== */
+.link-cards { display: flex; gap: 16px; margin: 20px 0 28px; flex-wrap: wrap; }
+.link-card { flex: 1; min-width: 200px; background: #f8fafe; border: 1px solid #d4dce8; border-radius: 10px; padding: 20px; text-align: center; transition: border-color .2s, box-shadow .2s; }
+.link-card:hover { border-color: #1a56a0; box-shadow: 0 4px 12px rgba(26,86,160,.12); }
+.link-card .card-icon { font-size: 36px; margin-bottom: 8px; }
+.link-card .card-title { font-size: 15px; font-weight: 700; color: #1a56a0; margin-bottom: 6px; }
+.link-card .card-desc { font-size: 13px; color: #666; line-height: 1.6; margin-bottom: 12px; }
+.link-card a { display: inline-block; background: #1a56a0; color: #fff; padding: 6px 18px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: 700; transition: background .2s; }
+.link-card a:hover { background: #15437a; }
+
+/* ===== コード ===== */
+code { background: #f0f3f8; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', 'SFMono-Regular', monospace; font-size: 13px; color: #c0392b; }
+
+/* ===== ページナビ ===== */
+.page-nav { display: flex; justify-content: space-between; margin-top: 52px; padding-top: 24px; border-top: 2px solid #e4eaf2; }
+.page-nav a { display: inline-block; padding: 12px 24px; background: #1a56a0; color: #fff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 700; transition: background .2s; }
+.page-nav a:hover { background: #15437a; }
+
+/* ===== フッター ===== */
+.site-footer { background: #2c3e50; color: rgba(255,255,255,.7); text-align: center; padding: 20px 40px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 初級編 <small>～ ノーコードで業務アプリを作ろう ～</small></h1>
+  </header>
+
+  <!-- ===== パンくず ===== -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a><span class="sep">▸</span>
+    <a href="../index.html">初級編</a><span class="sep">▸</span>
+    <strong>第7章：困ったときは</strong>
+  </nav>
+
+  <!-- ===== コンテンツ ===== -->
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">7</div>
+      <h2>第7章：困ったときは</h2>
+      <p class="chapter-sub">よくあるトラブルと解決方法をまとめました</p>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">1</div><span class="label">知ろう</span></div>
+        <div class="progress-step done"><div class="dot">2</div><span class="label">準備</span></div>
+        <div class="progress-step done"><div class="dot">3</div><span class="label">作ろう</span></div>
+        <div class="progress-step done"><div class="dot">4</div><span class="label">画面</span></div>
+        <div class="progress-step done"><div class="dot">5</div><span class="label">便利機能</span></div>
+        <div class="progress-step done"><div class="dot">6</div><span class="label">公開</span></div>
+        <div class="progress-step active"><div class="dot">7</div><span class="label">トラブル</span></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">この章で学ぶこと <span class="sub">─ 所要時間：約20分</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec7-1"><span class="toc-num">7-1</span><span class="toc-text"><strong>データ・テーブルのトラブル</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-2"><span class="toc-num">7-2</span><span class="toc-text"><strong>ビュー・表示のトラブル</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-3"><span class="toc-num">7-3</span><span class="toc-text"><strong>アクション・オートメーションのトラブル</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-4"><span class="toc-num">7-4</span><span class="toc-text"><strong>デプロイ・共有のトラブル</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-5"><span class="toc-num">7-5</span><span class="toc-text"><strong>トラブルシューティングの基本手順</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-6"><span class="toc-num">7-6</span><span class="toc-text"><strong>参考リンク集・次のステップ</strong></span><span class="toc-arrow">▸</span></a></li>
+      </ul>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 7-1 データ・テーブルのトラブル -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec7-1">
+      <span class="sec-num">7-1</span> データ・テーブルのトラブル
+    </h3>
+
+    <p>スプレッドシートやテーブル設定に関するよくあるトラブルと対処法です。</p>
+
+    <!-- トラブル1 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 行を追加しても AppSheet に反映されない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>スプレッドシートで直接行を追加した場合、AppSheet 側でデータが自動同期されないことがあります。また、ヘッダー行の列名が AppSheet 側と一致していない場合にも起きます。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>AppSheet エディタ右上の「Sync」ボタン（🔄アイコン）をクリックします。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>それでも反映されない場合は、Data &gt; Tables から対象テーブルを開き「Regenerate Structure」を実行します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>スプレッドシートのヘッダー行（1行目）が AppSheet のカラム名と一致しているか確認します。</p></div>
+        </div>
+      </div>
+      <div class="warn-box">
+        「Regenerate Structure」を実行すると、カラム設定（Type、Label など）がリセットされることがあります。実行前に設定をメモしておきましょう。
+      </div>
+    </div>
+
+    <!-- トラブル2 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 「Add a new row to another table」で行が追加されない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>キー列（KEY）に値が設定されていないことが最も多い原因です。AppSheet では、キー列が空のまま行を追加しようとするとエラーになります。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>追加先テーブルのキー列（例：貸出ID）に <strong>Initial value</strong> として <code>UNIQUEID()</code> を設定します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>Action の「Set these columns」からキー列の行を<strong>削除</strong>します（キー列は Initial value で自動生成されるため、Action 側で設定すると競合します）。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>Sync して再度 Action を実行し、行が追加されるか確認します。</p></div>
+        </div>
+      </div>
+      <div class="point-box">
+        この問題は本マニュアルの第3章で設定する「貸出ID の Initial value」が漏れている場合に発生します。<strong>第3章 セクション3-3</strong> を確認してください。
+      </div>
+    </div>
+
+    <!-- トラブル3 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 Ref（参照）列でドロップダウンが表示されない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>カラムの TYPE が <code>Ref</code> に設定されていないか、参照先テーブルの指定が間違っている可能性があります。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>Data &gt; Columns で対象カラムの TYPE を確認し、<code>Ref</code> に変更します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>「Source table」が正しいテーブル名を指しているか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>参照先テーブルに少なくとも1行のデータが存在することを確認します。</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- トラブル4 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 日付や数値がおかしな形式で表示される</div>
+      <div class="cause-title">💡 原因</div>
+      <p>スプレッドシートのセル書式と AppSheet のカラム TYPE が一致していません。たとえばスプレッドシートでは「文字列」なのに AppSheet では「Date」に設定されている場合などです。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>スプレッドシート側でセルの書式を正しく設定します（日付なら「日付」、数値なら「数値」）。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>AppSheet の Data &gt; Columns でカラムの TYPE が適切か確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body">
+            <p>Google スプレッドシートの地域設定を確認します。スプレッドシートを開き、<strong>「ファイル」&gt;「設定」&gt;「全般」&gt;「地域」</strong> が正しいか確認してください。AppSheet 側では <strong>Data &gt; Tables &gt; 対象テーブル &gt; Localization &gt; Data locale</strong> がスプレッドシートの地域と一致しているか確認します。</p>
+          </div>
+        </div>
+
+      <div class="note-box">
+        AppSheet の Data locale は通常、スプレッドシートの地域設定から自動取得されます。手動で変更した場合や、スプレッドシートの地域設定を後から変えた場合は、AppSheet エディタでテーブルを開き直すと自動的に再取得されます。
+      </div>
+      <div class="warn-box">
+        <strong>新エディタ（New Editor）をお使いの場合：</strong>新しいバージョンのエディタでは、テーブル設定画面に「Localization」セクションが表示されない場合があります。Data locale を確認・変更するには、<strong>旧エディタ（Legacy Editor）に切り替えてください。</strong>新エディタの左下または設定メニューにある「Switch to legacy editor」から切り替えが可能です。旧エディタでは <strong>Data &gt; Tables &gt; 対象テーブル &gt; Localization &gt; Data locale</strong> で確認できます。
+      </div>
+
+
+
+
+    <!-- ============================================================ -->
+    <!-- 7-2 ビュー・表示のトラブル -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec7-2">
+      <span class="sec-num">7-2</span> ビュー・表示のトラブル
+    </h3>
+
+    <p>アプリのビュー（画面表示）に関するトラブルです。</p>
+
+    <!-- トラブル1 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 ビューにデータが1件も表示されない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>ビューの「Row filter condition」や「Slice」の条件が厳しすぎて、該当するデータが0件になっている可能性があります。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>UX &gt; Views で対象ビューを選択し、「Row filter condition」に式が入っている場合は一旦削除してデータが表示されるか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>Slice を使用している場合は、Data &gt; Slices でフィルタ条件を見直します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>Security Filter が設定されている場合は、Settings &gt; Security で条件を確認します。</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- トラブル2 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 フォーム画面で一部のカラムが表示されない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>カラムの「Show?」が OFF になっているか、「Show_If」に条件式が設定されていて条件を満たしていない場合があります。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>Data &gt; Columns で対象カラムの「Show?」にチェックが入っているか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>「Show_If」に条件式が入っている場合はその条件を確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>キー列や計算列（App formula が設定されているカラム）はフォームに表示されない仕様です。意図した動作かどうか確認してください。</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- トラブル3 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 画像が表示されず壊れたアイコンになる</div>
+      <div class="cause-title">💡 原因</div>
+      <p>画像カラムの TYPE が <code>Image</code> になっていないか、画像ファイルの URL やパスが正しくありません。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>カラムの TYPE を <code>Image</code> に変更します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>画像の URL が有効であることをブラウザで確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>Google ドライブの画像は「リンクを知っている全員が閲覧可能」に設定します。</p></div>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- ============================================================ -->
+    <!-- 7-3 アクション・オートメーションのトラブル -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec7-3">
+      <span class="sec-num">7-3</span> アクション・オートメーションのトラブル
+    </h3>
+
+    <p>Action やオートメーション（Bot）に関するトラブルです。第5章で設定した貸出登録アクションやメール通知でよく発生します。</p>
+
+    <!-- トラブル1 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 アクションボタンが表示されない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>Action の「For a record of this table」が正しいテーブルを指していないか、「Only if this condition is true」の条件式で非表示になっている場合があります。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>Actions 画面で対象の Action を開き、「For a record of this table」がボタンを表示したいテーブル（例：備品マスタ）になっていることを確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>「Only if this condition is true」に式がある場合はその条件を確認するか、一旦削除してボタンが表示されるかテストします。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>Action 設定画面の <strong>「Position」</strong> が <strong>「Hide」</strong> になっていないか確認します。「Hide」が選択されていると、どのビューにもボタンが表示されません。</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- トラブル2 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 メール通知が届かない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>プロトタイプ状態では、メール通知はアプリ作成者（オーナー）にしか届きません。また、Automation の Event や Process の設定ミスも考えられます。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>まず Manage &gt; Monitor &gt; Audit History で Automation が実行されているか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>プロトタイプ状態の場合：To 欄のメールアドレスがアプリオーナーのアドレスと一致しているか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>迷惑メールフォルダも確認してください。AppSheet からのメールは <code>noreply@appsheet.com</code> から送信されます。</p></div>
+        </div>
+      </div>
+      <div class="warn-box">
+        <strong>プロトタイプ状態の制限：</strong>プロトタイプ状態（無料）では、オートメーションのメール送信先はアプリのオーナー（作成者）のみに限定されます。他のユーザーにメールを送るにはデプロイ（有料プラン）が必要です。
+      </div>
+    </div>
+
+    <!-- トラブル3 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 メールの件名に列名がそのまま表示される（例：[備品ID]）</div>
+      <div class="cause-title">💡 原因</div>
+      <p>Email Step の Subject や Body で <code>&amp;</code> を使った式の結合を記述しています。Email テンプレートでは式ではなくプレースホルダー形式を使う必要があります。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <table class="data-table left-align">
+        <thead>
+          <tr><th style="width:100px;">項目</th><th>修正前（誤り）</th><th>修正後（正しい）</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Subject</td><td style="text-align:left;"><code>"【備品貸出通知】" &amp; [備品ID] &amp; " が貸し出されました"</code></td><td style="text-align:left;"><code>【備品貸出通知】&lt;&lt;[備品ID]&gt;&gt; が貸し出されました</code></td></tr>
+        </tbody>
+      </table>
+      <div class="note-box">
+        Email Step の Subject と Body では、<code>&amp;</code> による式の結合は使えません。カラムの値を埋め込むには <code>&lt;&lt;[カラム名]&gt;&gt;</code> の形式で記述してください。詳しくは<strong>第5章</strong>を参照してください。
+      </div>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 7-4 デプロイ・共有のトラブル -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec7-4">
+      <span class="sec-num">7-4</span> デプロイ・共有のトラブル
+    </h3>
+
+    <p>デプロイやユーザー共有に関するトラブルです。</p>
+
+    <!-- トラブル1 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 デプロイチェックでエラーが出る</div>
+      <div class="cause-title">💡 原因</div>
+      <p>デプロイチェック（Manage &gt; Deploy）ではアプリの構成を検証します。エラーがあるとデプロイできません。</p>
+      <div class="fix-title">✅ よくあるエラーと対処法</div>
+      <table class="data-table left-align">
+        <thead>
+          <tr><th style="width:45%;">エラーメッセージ</th><th>対処法</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="text-align:left;">Table '○○' must have a key column</td><td style="text-align:left;">対象テーブルにキー列を設定する。Data &gt; Columns でいずれかの列の「KEY?」を ON にします。</td></tr>
+          <tr><td style="text-align:left;">Invalid expression in ...</td><td style="text-align:left;">指定された箇所の式（Formula）を確認し、構文エラーを修正します。</td></tr>
+          <tr><td style="text-align:left;">Column '○○' is required but has no Initial value</td><td style="text-align:left;">REQUIRED が ON のカラムに Initial value または App formula を設定します。</td></tr>
+          <tr><td style="text-align:left;">Security: No signed-in user restriction</td><td style="text-align:left;">Settings &gt; Security で「Require user signin」を ON にします。</td></tr>
+        </tbody>
+      </table>
+      <div class="note-box">
+        デプロイチェックの結果が Warning（黄色）であれば、デプロイは可能です。Error（赤）の場合のみデプロイがブロックされます。
+      </div>
+    </div>
+
+    <!-- トラブル2 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 共有したユーザーがアプリを開けない</div>
+      <div class="cause-title">💡 原因</div>
+      <p>ユーザーの Google アカウントがスプレッドシートへのアクセス権を持っていない、またはアプリの共有設定にユーザーのメールアドレスが登録されていない場合に発生します。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <div class="procedure">
+        <div class="proc-step">
+          <div class="proc-num">1</div>
+          <div class="proc-body"><p>AppSheet エディタの Users &gt; Users にユーザーのメールアドレスが登録されているか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">2</div>
+          <div class="proc-body"><p>Google スプレッドシートの共有設定で、ユーザーに「編集者」または「閲覧者」権限が付与されているか確認します。</p></div>
+        </div>
+        <div class="proc-step">
+          <div class="proc-num">3</div>
+          <div class="proc-body"><p>ユーザーが正しい Google アカウントでログインしていることを確認します。</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- トラブル3 -->
+    <div class="symptom-card">
+      <div class="symptom-title">🔴 「This app is in prototype mode」と表示される</div>
+      <div class="cause-title">💡 原因</div>
+      <p>これはエラーではありません。アプリがまだデプロイされておらず、プロトタイプ状態であることを示すメッセージです。</p>
+      <div class="fix-title">✅ 対処法</div>
+      <p>プロトタイプ状態でもアプリの基本機能は利用できます（最大10ユーザー）。無料で利用し続ける場合は、このメッセージは表示されたままになりますが、機能に影響はありません。デプロイ（有料プラン）すると、このメッセージは消えます。詳しくは<strong>第6章 セクション6-1</strong> を参照してください。</p>
+      <div class="point-box">
+        学習・検証目的であればプロトタイプ状態で十分です。慌ててデプロイする必要はありません。
+      </div>
+    </div>
+
+
+
+    <!-- ============================================================ -->
+    <!-- 7-5 トラブルシューティングの基本手順 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec7-5">
+      <span class="sec-num">7-5</span> トラブルシューティングの基本手順
+    </h3>
+
+    <p>問題が発生したとき、以下の手順で原因を切り分けると効率的に解決できます。</p>
+
+    <h4 class="sub-heading">■ 基本の5ステップ</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body"><p><strong>Sync する</strong> ─ AppSheet エディタ右上の 🔄 ボタンをクリックし、最新データを取得します。多くの問題はこれだけで解消します。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body"><p><strong>エラーメッセージを読む</strong> ─ 画面上部やプレビュー画面に表示されるエラーメッセージを確認します。赤い通知バーに具体的な原因が記載されていることが多いです。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body"><p><strong>Audit History を確認する</strong> ─ Manage &gt; Monitor &gt; Audit History で、いつ・何が起きたかを時系列で確認できます。Action や Automation の実行結果もここに記録されます。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body"><p><strong>Expression Assistant で式を検証する</strong> ─ 式（Formula）のエラーが疑われる場合は、カラム設定画面の式入力欄で Expression Assistant を使い、構文エラーや型の不一致を確認します。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body"><p><strong>スプレッドシートを直接確認する</strong> ─ AppSheet を介さずに Google スプレッドシートを直接開き、データの状態（空行、ヘッダーのずれ、書式の不一致など）を確認します。</p></div>
+      </div>
+    </div>
+
+
+        <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <p>問題が解決しない場合は、以下のチェックリストを上から順に確認してください。</p>
+
+    <ul class="checklist">
+      <li>Sync（同期）は実行しましたか？</li>
+      <li>スプレッドシートのヘッダー行（1行目）は正しいですか？</li>
+      <li>カラムの TYPE（型）は適切に設定されていますか？</li>
+      <li>KEY 列に Initial value（<code>UNIQUEID()</code> など）は設定されていますか？</li>
+      <li>REQUIRED が ON のカラムに値は入っていますか？</li>
+      <li>Ref 列の参照先テーブルは正しいですか？</li>
+      <li>Action の「For a record of this table」は正しいテーブルですか？</li>
+      <li>Automation の Event 設定（テーブル名、条件）は正しいですか？</li>
+      <li>式（Formula）に構文エラーはありませんか？</li>
+      <li>ブラウザのキャッシュをクリアして再読込しましたか？</li>
+    </ul>
+
+    <div class="point-box">
+      多くのトラブルは「Sync」と「エラーメッセージの確認」の2ステップで解決します。焦らず、まずはこの2つを試してみましょう。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 7-6 参考リンク集・次のステップ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec7-6">
+      <span class="sec-num">7-6</span> 参考リンク集・次のステップ
+    </h3>
+
+    <p>AppSheet の公式ドキュメントやコミュニティを活用すると、より高度な問題にも対応できるようになります。</p>
+
+    <h4 class="sub-heading">■ 公式リンク集</h4>
+
+    <div class="link-cards">
+      <div class="link-card">
+        <div class="card-icon">📖</div>
+        <div class="card-title">AppSheet 公式ヘルプ</div>
+        <div class="card-desc">各機能の詳細な仕様とチュートリアルが掲載されています</div>
+        <a href="https://support.google.com/appsheet" target="_blank">ヘルプを開く</a>
+      </div>
+      <div class="link-card">
+        <div class="card-icon">💬</div>
+        <div class="card-title">AppSheet コミュニティ</div>
+        <div class="card-desc">他のユーザーに質問したり、事例を参考にできます</div>
+        <a href="https://www.googlecloudcommunity.com/gc/AppSheet/ct-p/appsheet" target="_blank">コミュニティを開く</a>
+      </div>
+      <div class="link-card">
+        <div class="card-icon">🎓</div>
+        <div class="card-title">AppSheet テンプレート</div>
+        <div class="card-desc">サンプルアプリをコピーして構造を学べます</div>
+        <a href="https://www.appsheet.com/template/gallery" target="_blank">テンプレートを見る</a>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 次のステップ：中級編へ進むために</h4>
+
+    <p>本マニュアルの備品管理アプリが完成したら、次のテーマに挑戦してみましょう。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:180px;">テーマ</th><th>内容</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><strong>スライス（Slice）</strong></td><td style="text-align:left;">テーブルのデータを条件でフィルタし、特定のビューで表示するサブセットを作成します。「貸出中の備品だけ表示」などの絞り込みに使えます。</td></tr>
+        <tr><td style="text-align:left;"><strong>条件付き書式（Format Rules）</strong></td><td style="text-align:left;">ステータスに応じてセルの色を変えるなど、視覚的にわかりやすい画面を作れます。</td></tr>
+        <tr><td style="text-align:left;"><strong>グラフ表示（Chart View）</strong></td><td style="text-align:left;">データを棒グラフや円グラフで可視化します。貸出件数の推移や備品カテゴリの内訳表示に活用できます。</td></tr>
+        <tr><td style="text-align:left;"><strong>セキュリティフィルタ</strong></td><td style="text-align:left;">ログインユーザーに応じて、表示されるデータを自動的に制御します。部署ごとの閲覧制限などに使います。</td></tr>
+        <tr><td style="text-align:left;"><strong>承認ワークフロー</strong></td><td style="text-align:left;">承認フローの構築や、他の Google サービスとの連携を設定します。中級編で詳しく学びます。</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      本マニュアルで作成した備品管理アプリは、上記の中級テーマを試すベースとしてそのまま使えます。まずはスライスや条件付き書式から試してみると、AppSheet の表現力が広がることを実感できるはずです。
+    </div>
+
+    <!-- ===== 第7章まとめ ===== -->
+    <h4 class="sub-heading">■ 第7章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">セクション</th><th>内容</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">データ・テーブルのトラブル</td><td style="text-align:left;">行追加の不具合、Ref 設定、キー列の Initial value、データ型の不一致への対処</td></tr>
+        <tr><td>2</td><td style="text-align:left;">ビュー・表示のトラブル</td><td style="text-align:left;">データ非表示、カラム非表示、画像表示不具合への対処</td></tr>
+        <tr><td>3</td><td style="text-align:left;">アクション・オートメーション</td><td style="text-align:left;">ボタン非表示、メール未着、Subject の記法ミスへの対処</td></tr>
+        <tr><td>4</td><td style="text-align:left;">デプロイ・共有のトラブル</td><td style="text-align:left;">デプロイエラー、共有設定、プロトタイプ表示への対処</td></tr>
+        <tr><td>5</td><td style="text-align:left;">トラブルシューティング手順</td><td style="text-align:left;">基本5ステップとチェックリストによる体系的な問題解決</td></tr>
+        <tr><td>6</td><td style="text-align:left;">参考リンク集・次のステップ</td><td style="text-align:left;">公式リソースの紹介と中級テーマへの案内</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <strong>おつかれさまでした！</strong> 全7章を通じて、Google スプレッドシートから AppSheet アプリを作成し、テーブル設計・ビュー設定・アクション・オートメーション・公開までの一連の流れを体験しました。ここで学んだ基礎は、どんなアプリを作る場合にも応用できます。ぜひ自分のアイデアでアプリを作ってみてください。
+    </div>
+
+    <!-- ===== ページナビ ===== -->
+    <nav class="page-nav">
+      <a href="chapter06.html">← 第6章：アプリを公開しよう</a>
+      <a href="../index.html">トップページへ戻る →</a>
+    </nav>
+
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="site-footer">
+    AppSheet 初級編 マニュアル ─ 社内限定 ─ 最終更新：2026年3月
+  </footer>
+
+</div>
+</body>
+</html>

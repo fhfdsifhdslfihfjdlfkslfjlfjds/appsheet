@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 初級編 ― 第2章：準備しよう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #1a56a0 0%, #2874c4 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #e9eef5; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #1a56a0; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #eaf1fa 0%, #f5f8fc 100%);
+    border: 1px solid #c8d8eb; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #1a56a0; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #1a56a0; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.done .dot { background: #5a9bd5; }
+  .progress-step.active .dot { background: #1a56a0; box-shadow: 0 0 0 4px rgba(26,86,160,.2); }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #1a56a0; font-weight: 700; }
+  .progress-step.done .label { color: #5a9bd5; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #c8d8eb; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #1a56a0; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title .sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #f0f5fb; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #1a56a0; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #1a56a0; }
+  .toc-arrow { color: #1a56a0; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #1a56a0; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #1a56a0;
+  }
+  .section-heading .sec-num {
+    background: #1a56a0; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #2874c4; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #2874c4;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ブロック */
+  .procedure { margin: 20px 0 28px; }
+  .proc-step {
+    display: flex; gap: 16px; margin-bottom: 20px;
+    padding: 18px 20px; background: #f5f8fc; border: 1px solid #d8e2ef;
+    border-radius: 8px;
+  }
+  .proc-num {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #1a56a0; color: #fff;
+    border-radius: 50%; font-size: 15px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 8px; }
+  .proc-body p:last-child { margin-bottom: 0; }
+  .proc-key {
+    display: inline-block; background: #e0e6ef; padding: 1px 8px;
+    border-radius: 4px; font-size: 13px; font-weight: 700; color: #333;
+    font-family: Consolas, monospace;
+  }
+
+    /* ============================================
+     共通：図（単体画像）
+     ============================================ */
+  .figure {
+    margin: 24px 0;
+    text-align: center;
+  }
+  .figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+  }
+  .figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 8px;
+  }
+
+  /* ============================================
+     共通：図（複数画像 2列グリッド）
+     ============================================ */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .preview-figure {
+    background: #f8fafc;
+    border: 1px solid #d4dce8;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 0;
+    text-align: center;
+  }
+  .preview-figure img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+    margin-bottom: 10px;
+  }
+  .preview-figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 20px; font-size: 14px; }
+  .data-table th {
+    background: #1a56a0; color: #fff; font-weight: 700; padding: 10px 14px;
+    text-align: center; font-size: 13px;
+  }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tr:nth-child(even) td { background: #f8fafc; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* エディタ画面構成図 */
+  .editor-map {
+    margin: 24px 0;
+    border: 2px solid #c8d8eb;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .editor-map-header {
+    background: #3c4043;
+    color: #fff;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .editor-map-body {
+    display: grid;
+    grid-template-columns: 60px 1fr 320px;
+    min-height: 300px;
+  }
+  .editor-nav {
+    background: #f0f3f8;
+    border-right: 1px solid #d4dce8;
+    padding: 12px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+  .editor-nav .nav-item {
+    width: 40px; height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #666;
+    text-align: center;
+    line-height: 1.2;
+    cursor: default;
+    transition: background .15s;
+  }
+  .editor-nav .nav-item.active { background: #1a56a0; color: #fff; }
+  .editor-nav .nav-item:hover { background: #dde4ef; }
+  .editor-nav .nav-item.active:hover { background: #1a56a0; }
+  .editor-center {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #8eafd4;
+    font-size: 14px;
+    text-align: center;
+    gap: 8px;
+  }
+  .editor-center .area-label {
+    background: #eaf1fa;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    color: #1a56a0;
+    font-size: 12px;
+  }
+  .editor-preview {
+    background: #fafbfc;
+    border-left: 1px solid #d4dce8;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #8eafd4;
+    font-size: 14px;
+    text-align: center;
+    gap: 8px;
+  }
+  .editor-preview .area-label {
+    background: #eaf1fa;
+    padding: 4px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    color: #1a56a0;
+    font-size: 12px;
+  }
+  .editor-label-row {
+    display: grid;
+    grid-template-columns: 60px 1fr 320px;
+    font-size: 12px;
+    color: #1a56a0;
+    font-weight: 700;
+    text-align: center;
+    padding: 6px 0;
+    background: #eef4fb;
+    border-top: 1px solid #d4dce8;
+  }
+
+  /* 確認チェックリスト */
+  .checklist {
+    list-style: none;
+    margin: 16px 0 24px;
+    padding: 20px 24px;
+    background: #f5f8fc;
+    border: 1px solid #d8e2ef;
+    border-radius: 8px;
+  }
+  .checklist li {
+    padding: 8px 0 8px 28px;
+    position: relative;
+    font-size: 14px;
+  }
+  .checklist li::before {
+    content: '☐';
+    position: absolute;
+    left: 0;
+    font-size: 16px;
+    color: #1a56a0;
+  }
+
+  /* 補足・注意・POINTボックス */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #1a56a0; background: #eef4fb; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #1a56a0; margin-bottom: 6px; font-size: 15px; }
+
+  /* 結果確認ブロック */
+  .result-block {
+    background: #f0f5fb; border-radius: 8px;
+    padding: 20px 24px; margin: 20px 0;
+  }
+  .result-block .result-title { font-weight: 700; margin-bottom: 12px; color: #1a56a0; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #1a56a0; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #15467e; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+
+　.copy-block {
+  margin: 12px 0 24px;
+  border: 2px solid #1a56a0;
+  border-radius: 8px;
+  background: #f8fafe;
+  overflow: hidden;
+}
+.copy-block button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 16px 8px;
+  padding: 7px 18px;
+  background: #1a56a0;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s;
+}
+.copy-block button:hover {
+  background: #15437a;
+}
+.copy-block pre {
+  margin: 0;
+  padding: 14px 20px 18px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #333;
+  background: #fff;
+  border-top: 1px solid #d4dce8;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 初級編 <small>～ ノーコードで業務アプリを作ろう ～</small></h1>
+  </header>
+
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">初級編</a>
+    <span class="sep">▸</span>
+    <strong>第2章：準備しよう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">2</div>
+      <h2>準備しよう</h2>
+      <div class="chapter-sub">環境構築編 ─ アプリの土台となるデータとツールを用意する</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">知ろう</div></div>
+        <div class="progress-step active"><div class="dot">2</div><div class="label">準備</div></div>
+        <div class="progress-step"><div class="dot">3</div><div class="label">構築</div></div>
+        <div class="progress-step"><div class="dot">4</div><div class="label">画面</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">機能追加</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">公開</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec2-1">
+          <span class="toc-num">2-1</span>
+          <span class="toc-text"><strong>AppSheetへのアクセス方法</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-2">
+          <span class="toc-num">2-2</span>
+          <span class="toc-text"><strong>AppSheetの画面構成を理解する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-3">
+          <span class="toc-num">2-3</span>
+          <span class="toc-text"><strong>Googleスプレッドシートでデータを準備する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ==========================================
+         2-1  AppSheetへのアクセス方法
+         ========================================== -->
+    <h3 class="section-heading" id="sec2-1">
+      <span class="sec-num">2-1</span> AppSheetへのアクセス方法
+    </h3>
+
+    <p>
+      AppSheet には複数の方法でアクセスできます。ここでは最も一般的な <strong>2つの方法</strong> を紹介します。
+    </p>
+
+    <h4 class="sub-heading">方法A：AppSheet公式サイトから直接アクセス</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>ブラウザ（Google Chrome 推奨）で以下のURLにアクセスします。</p>
+          <p><strong style="color:#1a56a0;">https://www.appsheet.com</strong></p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-01.png" alt="AppSheet公式サイトにアクセス"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-1：AppSheet 公式サイトにアクセス</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>画面右上の <strong>「Get started」</strong> をクリックします。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-02.png" alt="Get startedをクリック"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-2：「Get started」をクリック</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>社内の <strong>Google Workspace アカウント</strong>（例：yourname@company.co.jp）または、ご自身の <strong>Google アカウント</strong> でログインします。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-03.png" alt="Googleアカウントでログイン"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-3：Google アカウントでログイン</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>ログイン後、AppSheet の <strong>「My Apps」画面</strong>（ダッシュボード）が表示されます。ここがアプリ管理の起点になります。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-04.png" alt="My Apps画面が表示される"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-4：My Apps 画面（ダッシュボード）</figcaption>
+      </figure>
+    </div>
+
+
+    
+        <h4 class="sub-heading">方法B：Googleスプレッドシートの拡張機能からアクセス</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Google スプレッドシートを開きます（データが入ったシートでも、空のシートでもOK）。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-05.png" alt="Googleスプレッドシートを開く"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-5：Google スプレッドシートを開いた状態</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>メニューバーから <strong>「拡張機能」→「AppSheet」→「アプリを作成」</strong> を選択します。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-06.png" alt="拡張機能メニューからAppSheetを選択"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-6：「拡張機能」→「AppSheet」→「アプリを作成」を選択</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>自動的に AppSheet のエディタ画面が開き、そのスプレッドシートのデータをもとにアプリが生成されます。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-01-07.png" alt="AppSheetエディタが自動で開く"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-1-7：AppSheet エディタが自動で開き、アプリが生成された状態</figcaption>
+      </figure>
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ どちらの方法がおすすめ？</div>
+      このマニュアルでは <strong>方法B（スプレッドシートから作成）</strong> を使って進めます。
+      データの準備 → アプリ作成がシームレスに繋がるため、初心者にはこちらが最もスムーズです。
+    </div>
+
+
+    <!-- ==========================================
+         2-2  画面構成を理解する
+         ========================================== -->
+    <h3 class="section-heading" id="sec2-2">
+      <span class="sec-num">2-2</span> AppSheetの画面構成を理解する
+    </h3>
+
+    <p>
+      AppSheet で実際にアプリを作る前に、エディタ（開発画面）の構成を把握しておきましょう。
+      大きく分けて <strong>3つのエリア</strong> で構成されています。
+    </p>
+
+    <!-- エディタ画面構成図（CSS図解） -->
+    <div class="editor-map">
+      <div class="editor-map-header">
+        <span>⚙️</span> AppSheet エディタ画面
+        <span style="margin-left:auto;opacity:.7;font-weight:400;">https://www.appsheet.com/template/...</span>
+      </div>
+      <div class="editor-map-body">
+        <div class="editor-nav">
+          <div class="nav-item active" title="Data">📊<br>Data</div>
+          <div class="nav-item" title="App">🎨<br>App</div>
+          <div class="nav-item" title="Actions">⚡<br>Actions</div>
+          <div class="nav-item" title="Auto">🤖<br>Auto</div>
+          <div class="nav-item" title="Security">🔒<br>Security</div>
+          <div class="nav-item" title="Settings">⚙️<br>Settings</div>
+        </div>
+        <div class="editor-center">
+          <span style="font-size:32px;opacity:.5;">🛠️</span>
+          選択した機能の設定・編集を行うエリア<br>
+          （テーブル設定、ビュー設定、アクション設定など）
+          <span class="area-label">② 設定エリア（中央）</span>
+        </div>
+        <div class="editor-preview">
+          <span style="font-size:32px;opacity:.5;">📱</span>
+          アプリのリアルタイムプレビュー<br>
+          設定を変更すると即座に反映されます
+          <span class="area-label">③ プレビュー（右側）</span>
+        </div>
+      </div>
+      <div class="editor-label-row">
+        <div>① ナビ</div>
+        <div>② 設定エリア</div>
+        <div>③ ライブプレビュー</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 3つのエリアの役割</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">番号</th><th style="width:160px;">エリア名</th><th>役割</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>①</td>
+          <td>左ナビゲーション</td>
+          <td>Data（データ）、App（画面設計）、Actions（アクション）、Automation（自動化）、Security（セキュリティ）など、設定したい機能を選択するメニュー</td>
+        </tr>
+        <tr>
+          <td>②</td>
+          <td>設定エリア（中央）</td>
+          <td>左ナビで選んだ機能の詳細設定を行う作業エリア。テーブルのカラム設定やビューのカスタマイズなど、ほとんどの操作はここで行います</td>
+        </tr>
+        <tr>
+          <td>③</td>
+          <td>ライブプレビュー（右側）</td>
+          <td>作成中のアプリをリアルタイムで確認できるプレビュー画面。設定を変更すると即座に反映されるので、完成イメージを確認しながら作業できます</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 左ナビゲーションの主なメニュー</h4>
+
+<table class="data-table left-align">
+  <thead>
+    <tr><th style="width:60px;">アイコン</th><th style="width:140px;">メニュー名</th><th>用途</th><th style="width:80px;">使用する章</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>📊</td><td>Data</td><td>テーブル・カラムの設定、データ型の変更、リレーションの構築</td><td>第3章</td></tr>
+        <tr>
+      <td>🎨</td>
+      <td>App &gt; Views</td>
+      <td>画面レイアウト（一覧・詳細・フォーム等）の作成・カスタマイズ</td>
+      <td>第4章</td>
+    </tr>
+    <tr>
+      <td>🎨</td>
+      <td>App &gt; Format Rules</td>
+      <td>条件付き書式（例：「使用中」の行を赤く表示、期限切れを強調など）</td>
+      <td>中級編</td>
+    </tr>
+    <tr><td>⚡</td><td>Actions</td><td>ボタンアクションの作成（データ変更・画面遷移・外部リンクなど）</td><td>第5章</td></tr>
+    <tr><td>🤖</td><td>Automation</td><td>自動処理（通知メール、ステータス変更など）の設定</td><td>第5章・中級編</td></tr>
+    <tr><td>🔒</td><td>Security</td><td>ユーザーの認証方式・アクセス権限の設定</td><td>第6章</td></tr>
+    <tr><td>⚙️</td><td>Settings</td><td>アプリ名・テーマ・言語・パフォーマンスなどの全般設定</td><td>第4章</td></tr>
+  </tbody>
+</table>
+
+
+    <div class="note-box">
+      <div class="note-title">💡 補足</div>
+      今は全メニューを覚える必要はありません。各章で使うタイミングで詳しく解説しますので、「こんなメニューがあるんだ」程度に把握しておけば十分です。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ プレビューは「ライブ」です</div>
+      右側のプレビュー画面は単なる見た目の確認ではなく、<strong>実際のアプリそのもの</strong>です。
+      プレビューでデータを追加・変更・削除すると、元のスプレッドシートにも反映されます。練習段階ではテストデータで作業しましょう。
+    </div>
+
+
+    <!-- ==========================================
+         2-3  スプレッドシートでデータを準備する
+         ========================================== -->
+    <h3 class="section-heading" id="sec2-3">
+      <span class="sec-num">2-3</span> Googleスプレッドシートでデータを準備する
+    </h3>
+
+    <p>
+      いよいよ実際にデータを準備します。第1章で紹介した「備品一覧」と「貸出履歴」の2つのシートを、Googleスプレッドシートに作成しましょう。
+    </p>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 練習用ファイルを使う場合</div>
+      第1章の冒頭にある「練習用ファイル」からサンプルデータ入りのスプレッドシートをダウンロード済みの方は、以下の手順1〜3をスキップして、<a href="#sec2-3-check" style="color:#1a56a0;">「4. データの確認」</a> へ進んでください。
+    </div>
+
+        <h4 class="sub-heading">1. 新しいスプレッドシートを作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Google ドライブ</strong>（https://drive.google.com）を開きます。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-03-01.png" alt="Googleドライブを開く"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-3-1：Google ドライブのトップ画面</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>左上の <strong>「+ 新規」→「Google スプレッドシート」→「空白のスプレッドシート」</strong> をクリックします。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-03-02.png" alt="新規スプレッドシートを作成"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-3-2：「+ 新規」→「Google スプレッドシート」→「空白のスプレッドシート」を選択</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>ファイル名を <strong>「備品管理アプリ_データ」</strong> に変更します（左上のタイトル部分をクリックして入力）。</p>
+        </div>
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-03-03.png" alt="ファイル名を変更"
+             style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+        <figcaption>図2-3-3：ファイル名を「備品管理アプリ_データ」に変更</figcaption>
+      </figure>
+    </div>
+
+    <h4 class="sub-heading">2. シート①「備品一覧」を作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>画面下部のシートタブ名「シート1」をダブルクリックして、<strong>「備品一覧」</strong>に名前を変更します。</p>
+        </div>
+      </div>
+
+    <!-- ステップ② -->
+<div class="proc-step">
+  <div class="proc-num">2</div>
+  <div class="proc-body">
+    <p>下の枠内をすべて選択してコピーし、スプレッドシートの <strong>A1セル</strong> に貼り付けてください。<br>
+    1行目がヘッダー、2行目以降がサンプルデータになります。</p>
+  </div>
+</div>
+
+<div class="copy-block">
+  <button onclick="copyData('bihin-data')">📋 コピーする</button>
+  <pre id="bihin-data">備品ID	備品名	カテゴリ	設置場所	数量	購入日	画像	ステータス
+B001	ノートPC（Dell Latitude）	IT機器	3F-会議室A	5	2025/04/01		在庫あり
+B002	外付けモニター 24インチ	IT機器	2F-執務室	10	2025/06/15		在庫あり
+B003	ホワイトボード（大）	オフィス家具	4F-会議室B	2	2024/11/20		在庫あり
+B004	プロジェクター（EPSON）	IT機器	3F-会議室A	1	2024/08/10		使用中
+B005	デスクチェア（オカムラ）	オフィス家具	2F-執務室	15	2025/01/15		在庫あり
+B006	ポータブルスピーカー	IT機器	1F-受付	3	2025/03/20		在庫あり
+B007	シュレッダー	事務機器	2F-執務室	2	2023/09/01		在庫あり
+B008	カラープリンター（Canon）	IT機器	3F-コピー室	1	2024/02/14		使用中
+B009	会議用マイク（Jabra）	IT機器	4F-会議室B	3	2025/07/01		在庫あり
+B010	収納キャビネット	オフィス家具	2F-執務室	6	2023/04/10		在庫あり</pre>
+</div>
+  
+      
+    <div class="procedure" style="margin-top:12px;">
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>貼り付け後、以下のスクリーンショットのように <strong>A列〜H列 × 2〜11行目</strong> にデータが入っていることを確認してください。画像（G列）は空欄のままでOKです。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch02-03-04.png"
+       alt="「備品一覧」シートの入力完了後のスクリーンショット<br>
+        A列〜H列 × 1〜11行目（ヘッダー＋データ10行）が表示されている状態"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図2-3-4：「備品一覧」シートの完成例（10件のサンプルデータ）</figcaption>
+</figure>    
+
+
+    <h4 class="sub-heading">3. シート②「貸出履歴」を作成する</h4>
+
+       <div class="proc-step">
+  <div class="proc-num">2</div>
+  <div class="proc-body">
+    <p>下の枠内をすべて選択してコピーし、スプレッドシートの <strong>A1セル</strong> に貼り付けてください。</p>
+  </div>
+</div>
+
+<div class="copy-block">
+  <button onclick="copyData('kashidashi-data')">📋 コピーする</button>
+  <pre id="kashidashi-data">貸出ID	備品ID	貸出者	貸出日	返却予定日	返却日	メモ
+L001	B001	田中太郎	2025/09/01	2025/09/08	2025/09/07	問題なし
+L002	B004	佐藤花子	2025/09/03	2025/09/10	2025/09/10	
+L003	B009	鈴木一郎	2025/09/05	2025/09/12	2025/09/11	マイク1本のみ
+L004	B001	山田美咲	2025/09/10	2025/09/17		出張用に持出し
+L005	B008	田中太郎	2025/09/12	2025/09/19		カラー印刷のため
+L006	B003	佐藤花子	2025/09/14	2025/09/15	2025/09/15	研修で使用
+L007	B007	高橋健一	2025/09/15	2025/09/22		
+L008	B004	伊藤めぐみ	2025/09/18	2025/09/25		プレゼン用</pre>
+</div>
+ 
+    <div class="procedure" style="margin-top:12px;">
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>貼り付け後、<strong>A列〜G列 × 2〜9行目</strong> にデータが入っていることを確認してください。返却日（F列）が空欄の行は「まだ返却されていない」ことを意味します。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch02-03-05.png"
+       alt="「貸出履歴」シートの入力完了後のスクリーンショット"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図2-3-5：「貸出履歴」シートの完成例</figcaption>
+</figure>    
+
+
+    <h4 class="sub-heading" id="sec2-3-check">4. データの確認</h4>
+
+    <p>データ入力が完了したら、以下のチェックリストで確認しましょう。</p>
+
+    <ul class="checklist">
+      <li>スプレッドシートのファイル名を「備品管理アプリ_データ」に設定した</li>
+      <li>シート名が「備品一覧」「貸出履歴」の2つになっている</li>
+      <li>各シートの1行目にヘッダー行（項目名）が入力されている</li>
+      <li>「備品一覧」に最低3行以上のサンプルデータがある</li>
+      <li>「貸出履歴」に最低2行以上のサンプルデータがある</li>
+      <li>セルの結合を使っていない</li>
+      <li>データの途中に空白行がない</li>
+    </ul>
+
+    <div class="result-block">
+      <div class="result-title">✅ 確認結果</div>
+      <p>すべてにチェックが入れば、データの準備は完了です。次のスクリーンショットのような状態になっているはずです。</p>
+    </div>
+
+   
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ なぜスプレッドシートで準備するのか？</div>
+      AppSheet は「スプレッドシートをアプリのデータベースとして使う」仕組みです。
+      アプリで追加・編集したデータはすべてスプレッドシートに保存されるため、データの確認やバックアップも簡単にできます。
+      普段使い慣れたスプレッドシートがそのままデータベースになるのが、AppSheet の大きな特徴です。
+    </div>
+
+    <p style="margin-top:24px;">
+      以上で第2章は終了です。AppSheet へのアクセス方法、エディタの画面構成、そしてアプリの土台となるデータの準備が完了しました。
+    </p>
+    <p>
+      次の第3章では、このスプレッドシートをもとに AppSheet でアプリを自動生成し、カラムの型設定やテーブルのリレーションなど、アプリの骨格を構築していきます。
+    </p>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter01.html">← 第1章：AppSheetを知ろう</a>
+      <a href="chapter03.html">第3章：アプリを作ろう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 初級編 マニュアル ─ 社内限定 ─ 最終更新：2026年3月
+  </footer>
+
+</div>
+
+<script>
+function copyData(id) {
+  var el = document.getElementById(id);
+  var text = el.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = el.parentElement.querySelector('button');
+    var original = btn.innerHTML;
+    btn.innerHTML = '✅ コピーしました！';
+    btn.style.background = '#27ae60';
+    setTimeout(function() {
+      btn.innerHTML = original;
+      btn.style.background = '#1a56a0';
+    }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>

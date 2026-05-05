@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 初級編 ― 第4章：画面を整えよう</title>
+<style>
+/* ===== リセット・基本 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9; }
+.page-wrapper { max-width: 960px; margin: 0 auto; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh; }
+
+/* ===== ヘッダー ===== */
+.site-header { background: linear-gradient(135deg, #1a56a0 0%, #2874c4 100%); color: #fff; padding: 28px 40px 24px; }
+.site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+.site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+.site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+/* ===== パンくず ===== */
+.breadcrumb { background: #e9eef5; padding: 10px 40px; font-size: 13px; color: #666; }
+.breadcrumb a { color: #1a56a0; text-decoration: none; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+/* ===== コンテンツ ===== */
+.content { padding: 36px 40px 60px; }
+
+/* ===== 章タイトル ===== */
+.chapter-title-block { background: linear-gradient(135deg, #eaf1fa 0%, #f5f8fc 100%); border: 1px solid #c8d8eb; border-radius: 10px; padding: 32px 36px; margin-bottom: 40px; text-align: center; }
+.chapter-number { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #1a56a0; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+.chapter-title-block h2 { font-size: 24px; color: #1a56a0; font-weight: 700; margin-bottom: 6px; }
+.chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+/* ===== 進捗バー ===== */
+.progress-bar-wrapper { margin-bottom: 36px; }
+.progress-steps { display: flex; justify-content: space-between; position: relative; }
+.progress-steps::before { content: ''; position: absolute; top: 16px; left: 24px; right: 24px; height: 3px; background: #d4dce8; z-index: 0; }
+.progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+.progress-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #d4dce8; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+.progress-step.done .dot { background: #27ae60; }
+.progress-step.active .dot { background: #1a56a0; box-shadow: 0 0 0 4px rgba(26,86,160,.2); }
+.progress-step .label { font-size: 11px; color: #888; text-align: center; }
+.progress-step.active .label { color: #1a56a0; font-weight: 700; }
+.progress-step.done .label { color: #27ae60; }
+
+/* ===== 章内目次 ===== */
+.toc-box { border: 1px solid #c8d8eb; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+.toc-box-title { text-align: center; font-size: 17px; color: #1a56a0; font-weight: 700; margin-bottom: 20px; }
+.toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+.toc-list { list-style: none; }
+.toc-list li { border-bottom: 1px solid #eaeef4; }
+.toc-list li:last-child { border-bottom: none; }
+.toc-list a { display: flex; align-items: center; padding: 14px 12px; text-decoration: none; color: #333; transition: background .15s; border-radius: 6px; }
+.toc-list a:hover { background: #f0f5fb; }
+.toc-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #1a56a0; color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0; }
+.toc-text { flex: 1; font-size: 15px; }
+.toc-text strong { color: #1a56a0; }
+.toc-arrow { color: #1a56a0; font-size: 18px; margin-left: 8px; }
+
+/* ===== セクション見出し ===== */
+.section-heading { font-size: 21px; color: #1a56a0; font-weight: 700; margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #1a56a0; }
+.section-heading .sec-num { background: #1a56a0; color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; font-size: 15px; font-weight: 700; margin-right: 10px; vertical-align: middle; }
+
+/* ===== 小見出し ===== */
+.sub-heading { font-size: 17px; color: #2874c4; font-weight: 700; margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #2874c4; }
+
+/* ===== 段落 ===== */
+.content p { margin-bottom: 16px; }
+
+/* ===== 手順ステップ ===== */
+.procedure { background: #f8fafe; border: 1px solid #d4dce8; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+.proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #e4eaf2; }
+.proc-step:last-child { border-bottom: none; }
+.proc-num { width: 32px; height: 32px; background: #1a56a0; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.proc-body { flex: 1; }
+.proc-body p { margin-bottom: 4px; line-height: 1.6; }
+.proc-body p:last-child { margin-bottom: 0; }
+
+/* ===== テーブル ===== */
+.data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+.data-table th { background: #1a56a0; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+.data-table td { padding: 10px 14px; border-bottom: 1px solid #e4eaf2; text-align: center; }
+.data-table tbody tr:hover { background: #f5f8fc; }
+.data-table.left-align td { text-align: left; }
+.data-table.left-align td:first-child { text-align: center; }
+
+/* ===== ボックス共通 ===== */
+.note-box, .warn-box, .point-box { border-radius: 8px; padding: 18px 22px; margin: 20px 0 28px; font-size: 14px; line-height: 1.75; }
+.note-box { background: #eafaf1; border: 1px solid #82d8a2; }
+.note-box::before { content: '📝 補足'; display: block; font-weight: 700; color: #27ae60; margin-bottom: 6px; }
+.warn-box { background: #fef9e7; border: 1px solid #f4d03f; }
+.warn-box::before { content: '⚠️ 注意'; display: block; font-weight: 700; color: #d4a017; margin-bottom: 6px; }
+.point-box { background: #eaf1fa; border: 1px solid #a3c4e9; }
+.point-box::before { content: '💡 POINT'; display: block; font-weight: 700; color: #1a56a0; margin-bottom: 6px; }
+
+    /* ============================================
+     共通：図（単体画像）
+     ============================================ */
+  .figure {
+    margin: 24px 0;
+    text-align: center;
+  }
+  .figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+  }
+  .figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 8px;
+  }
+    /* 部分スクリーンショット用（縮小してシャープ表示） */
+  .figure img.sharp {
+    width: 60%;
+    max-width: 480px;
+  }
+
+
+  /* ============================================
+     共通：図（複数画像 2列グリッド）
+     ============================================ */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .preview-figure {
+    background: #f8fafc;
+    border: 1px solid #d4dce8;
+    border-radius: 10px;
+    padding: 16px;
+    margin: 0;
+    text-align: center;
+  }
+  .preview-figure img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+    margin-bottom: 10px;
+  }
+  .preview-figure figcaption {
+    font-size: 13px;
+    color: #888;
+    margin-top: 4px;
+    line-height: 1.6;
+  }
+
+/* ===== ビュータイプカード ===== */
+.view-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin: 24px 0 32px; }
+.view-type-card { border: 2px solid #d4dce8; border-radius: 10px; padding: 20px 16px; text-align: center; background: #fff; transition: border-color .2s, box-shadow .2s; }
+.view-type-card:hover { border-color: #1a56a0; box-shadow: 0 4px 12px rgba(26,86,160,.12); }
+.view-type-card .vt-icon { font-size: 36px; margin-bottom: 10px; display: block; }
+.view-type-card .vt-name { font-size: 15px; font-weight: 700; color: #1a56a0; margin-bottom: 6px; }
+.view-type-card .vt-desc { font-size: 12.5px; color: #666; line-height: 1.6; }
+.view-type-card.highlight { border-color: #1a56a0; background: #f0f5fb; }
+.view-type-card.highlight .vt-name::after { content: ' ★'; color: #e67e22; font-size: 13px; }
+
+/* ===== ビュー構成図（横並び固定） ===== */
+.view-structure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 28px 0 32px;
+  padding: 28px 16px;
+  background: linear-gradient(135deg, #f5f8fc 0%, #eaf1fa 100%);
+  border: 1px solid #c8d8eb;
+  border-radius: 12px;
+  /* flex-wrap なし → 折り返さない */
+}
+.vs-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  min-width: 0;
+  padding: 12px 8px;
+}
+.vs-icon {
+  width: 64px; height: 64px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin-bottom: 10px;
+  box-shadow: 0 3px 10px rgba(0,0,0,.1);
+  color: #fff;
+  flex-shrink: 0;
+}
+.vs-icon.list   { background: linear-gradient(135deg, #1a56a0, #3a9bd5); }
+.vs-icon.detail { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+.vs-icon.form   { background: linear-gradient(135deg, #e67e22, #f39c12); }
+.vs-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+.vs-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+
+/* 矢印（SVGで崩れない） */
+.vs-arrow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 6px;
+}
+.vs-arrow .arrow-text {
+  font-size: 10px;
+  color: #1a56a0;
+  font-weight: 700;
+  margin-top: 5px;
+}
+
+/* ===== ナビメニュー図 ===== */
+.nav-demo { display: flex; align-items: flex-end; justify-content: center; gap: 0; margin: 24px 0 32px; padding: 20px 16px 16px; background: #333; border-radius: 0 0 12px 12px; border: 2px solid #555; }
+.nav-item { flex: 1; max-width: 120px; text-align: center; padding: 10px 4px 8px; color: rgba(255,255,255,.5); font-size: 11px; border-top: 3px solid transparent; transition: all .2s; cursor: default; }
+.nav-item.active { color: #fff; border-top-color: #3a9bd5; }
+.nav-item .nav-icon { font-size: 22px; display: block; margin-bottom: 4px; }
+.nav-item .nav-label { font-weight: 700; }
+
+/* ===== ブランディング設定テーブル ===== */
+.color-sample { display: inline-block; width: 18px; height: 18px; border-radius: 4px; vertical-align: middle; margin-right: 6px; border: 1px solid #ddd; }
+
+/* ===== ページナビ ===== */
+.page-nav { display: flex; justify-content: space-between; margin-top: 52px; padding-top: 24px; border-top: 2px solid #e4eaf2; }
+.page-nav a { display: inline-block; padding: 12px 24px; background: #1a56a0; color: #fff; border-radius: 6px; text-decoration: none; font-size: 14px; font-weight: 700; transition: background .2s; }
+.page-nav a:hover { background: #15437a; }
+.page-nav a.disabled { background: #ccc; pointer-events: none; }
+
+/* ===== フッター ===== */
+.site-footer { background: #2c3e50; color: rgba(255,255,255,.7); text-align: center; padding: 20px 40px; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 初級編 <small>～ ノーコードで業務アプリを作ろう ～</small></h1>
+  </header>
+
+  <!-- ===== パンくず ===== -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a><span class="sep">▸</span>
+    <a href="../index.html">初級編</a><span class="sep">▸</span>
+    <strong>第4章：画面を整えよう</strong>
+  </nav>
+
+  <!-- ===== コンテンツ ===== -->
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">4</div>
+      <h2>第4章：画面を整えよう</h2>
+      <p class="chapter-sub">ビュー（画面）を設定して、使いやすいアプリに仕上げます</p>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">1</div><span class="label">知ろう</span></div>
+        <div class="progress-step done"><div class="dot">2</div><span class="label">準備</span></div>
+        <div class="progress-step done"><div class="dot">3</div><span class="label">作ろう</span></div>
+        <div class="progress-step active"><div class="dot">4</div><span class="label">画面</span></div>
+        <div class="progress-step"><div class="dot">5</div><span class="label">便利機能</span></div>
+        <div class="progress-step"><div class="dot">6</div><span class="label">公開</span></div>
+        <div class="progress-step"><div class="dot">7</div><span class="label">トラブル</span></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">この章で学ぶこと <span class="sub">─ 所要時間：約40分</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec4-1"><span class="toc-num">4-1</span><span class="toc-text"><strong>ビュー（View）の基本を理解する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec4-2"><span class="toc-num">4-2</span><span class="toc-text"><strong>備品一覧のビューを設定する（Deck View）</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec4-3"><span class="toc-num">4-3</span><span class="toc-text"><strong>貸出履歴のビューを追加する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec4-4"><span class="toc-num">4-4</span><span class="toc-text"><strong>Detail View と Form View を確認する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec4-5"><span class="toc-num">4-5</span><span class="toc-text"><strong>ナビゲーションメニューを整理する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec4-6"><span class="toc-num">4-6</span><span class="toc-text"><strong>アプリのブランディング（テーマ・アイコン）</strong></span><span class="toc-arrow">▸</span></a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-1 ビュー（View）の基本を理解する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-1">
+      <span class="sec-num">4-1</span> ビュー（View）の基本を理解する
+    </h3>
+
+    <p>AppSheetでは、アプリの画面のことを <strong>「ビュー（View）」</strong> と呼びます。第3章で設定したデータを「どのように表示するか」をビューで決めていきます。</p>
+
+    <h4 class="sub-heading">■ 画面遷移の基本フロー</h4>
+
+    <p>備品管理アプリでは、以下の3つの画面が基本の遷移パターンになります。</p>
+
+    <!-- 画面遷移図 -->
+    <div class="view-structure">
+      <div class="vs-card">
+        <div class="vs-icon list">📋</div>
+        <div class="vs-label">一覧画面</div>
+        <div class="vs-sub">Deck View / Table View<br>データの一覧を表示</div>
+      </div>
+
+      <div class="vs-arrow">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="0" y1="10" x2="48" y2="10" stroke="#1a56a0" stroke-width="3"/>
+          <polygon points="48,4 60,10 48,16" fill="#1a56a0"/>
+        </svg>
+        <span class="arrow-text">タップ</span>
+      </div>
+
+      <div class="vs-card">
+        <div class="vs-icon detail">🔍</div>
+        <div class="vs-label">詳細画面</div>
+        <div class="vs-sub">Detail View<br>1件の詳細を表示</div>
+      </div>
+
+      <div class="vs-arrow">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="0" y1="10" x2="48" y2="10" stroke="#1a56a0" stroke-width="3"/>
+          <polygon points="48,4 60,10 48,16" fill="#1a56a0"/>
+        </svg>
+        <span class="arrow-text">編集</span>
+      </div>
+
+      <div class="vs-card">
+        <div class="vs-icon form">✏️</div>
+        <div class="vs-label">入力画面</div>
+        <div class="vs-sub">Form View<br>データの追加・編集</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 主なビュータイプ</h4>
+
+    <p>AppSheetには多くのビュータイプがありますが、初級編では以下を使います。★マークが今回設定するビューです。</p>
+
+    <div class="view-type-grid">
+      <div class="view-type-card highlight">
+        <span class="vt-icon">🃏</span>
+        <div class="vt-name">Deck</div>
+        <div class="vt-desc">カード形式の一覧。画像・タイトル・サブ情報を表示</div>
+      </div>
+      <div class="view-type-card highlight">
+        <span class="vt-icon">📊</span>
+        <div class="vt-name">Table</div>
+        <div class="vt-desc">表形式の一覧。Excel風にデータを表示</div>
+      </div>
+      <div class="view-type-card highlight">
+        <span class="vt-icon">🔍</span>
+        <div class="vt-name">Detail</div>
+        <div class="vt-desc">1件のデータの詳細情報を表示</div>
+      </div>
+      <div class="view-type-card highlight">
+        <span class="vt-icon">✏️</span>
+        <div class="vt-name">Form</div>
+        <div class="vt-desc">データの新規追加・編集用の入力フォーム</div>
+      </div>
+      <div class="view-type-card">
+        <span class="vt-icon">🖼️</span>
+        <div class="vt-name">Gallery</div>
+        <div class="vt-desc">画像をメインに表示するグリッドレイアウト</div>
+      </div>
+      <div class="view-type-card">
+        <span class="vt-icon">📅</span>
+        <div class="vt-name">Calendar</div>
+        <div class="vt-desc">日付データをカレンダー形式で表示</div>
+      </div>
+      <div class="view-type-card">
+        <span class="vt-icon">📈</span>
+        <div class="vt-name">Chart</div>
+        <div class="vt-desc">グラフ・チャートでデータを可視化</div>
+      </div>
+      <div class="view-type-card">
+        <span class="vt-icon">📌</span>
+        <div class="vt-name">Dashboard</div>
+        <div class="vt-desc">複数のビューを1画面にまとめて表示</div>
+      </div>
+    </div>
+
+    <div class="point-box">
+      <strong>Detail View</strong> と <strong>Form View</strong> は、一覧画面からデータをタップしたり「+」ボタンを押したときに自動的に表示されるため、個別にビューを作成する必要はありません。AppSheetが自動で生成してくれます。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-2 備品一覧のビューを設定する（Deck View） -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-2">
+      <span class="sec-num">4-2</span> 備品一覧のビューを設定する（Deck View）
+    </h3>
+
+    <p>アプリ作成時に自動生成された「備品一覧」のビューをカスタマイズして、見やすいカード形式の一覧画面にします。</p>
+
+    <h4 class="sub-heading">■ ビュー設定画面を開く</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左ナビゲーションの <strong>「App」</strong> → <strong>「Views」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>ビュー一覧から <strong>「備品一覧」</strong> をクリックして設定画面を開きます。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+  <img src="images/ch04-02-01.png"
+       alt="App > Views でビュー一覧が表示され、「備品一覧」を選択している画面"
+       style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+  <figcaption>図4-2-1：Views設定画面を開く</figcaption>
+</figure>
+
+    <h4 class="sub-heading">■ View type を「deck」に設定する</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p><strong>「View type」</strong> のアイコン一覧から <strong>「deck」</strong> を選択します（青くハイライトされます）。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p>プレビュー画面にカード形式の一覧が表示されることを確認します。</p>
+    </div>
+  </div>
+</div>
+
+    <figure class="figure">
+      <img src="images/ch04-02-02.png"
+           alt="Deck Viewに変更後のプレビュー"
+           class="sharp">
+      <figcaption>図4-2-2：Deck Viewに変更後のプレビュー</figcaption>
+    </figure>
+
+
+    <h4 class="sub-heading">■ 表示項目をカスタマイズする</h4>
+
+    <p>Deck Viewのカードに表示する項目を設定します。以下の設定を確認・変更してください。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:180px;">設定項目</th><th>設定値</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">View type</td><td>deck</td><td>カード形式の一覧表示</td></tr>
+        <tr><td style="text-align:left;">For this data</td><td>備品一覧</td><td>表示するテーブル</td></tr>
+        <tr><td style="text-align:left;">Sort by</td><td>備品ID - Ascending</td><td>ID順に並べ替え</td></tr>
+        <tr><td style="text-align:left;">Group by</td><td>カテゴリ</td><td>カテゴリごとにグループ化</td></tr>
+        <tr><td style="text-align:left;">Primary header</td><td>備品名</td><td>カードのメインタイトル</td></tr>
+        <tr><td style="text-align:left;">Secondary header</td><td>備品ID</td><td>サブタイトル</td></tr>
+        <tr><td style="text-align:left;">Summary column</td><td>設置場所</td><td>追加情報の表示</td></tr>
+        <tr><td style="text-align:left;">Main image</td><td>画像（Auto assign）</td><td>カードに表示するサムネイル画像</td></tr>
+
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>ビュー設定画面で上記の各項目を設定します。ドロップダウンから対応するカラム名を選択してください。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>プレビュー画面で、カードに「備品名」「備品ID」「設置場所」が表示され、カテゴリごとにグループ化されていることを確認します。Main imageは <strong>「Auto assign（画像）」</strong> のままでOKです。</p>
+
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>「Save」</strong> ボタンで保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch04-02-03.png"
+           alt="Deck Viewの表示項目を設定した後のプレビュー（カテゴリでグループ化、備品名＋IDが表示）"
+           class="sharp">
+      <figcaption>図4-2-3：カスタマイズ後の備品一覧（Deck View）</figcaption>
+    </figure>
+
+
+    <div class="note-box">
+      「画像」カラムにまだデータが入っていないため、サムネイルは表示されません。アプリ完成後にプレビューやスマホから写真を追加すると、カードに画像が表示されるようになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-3 貸出履歴のビューを追加する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-3">
+      <span class="sec-num">4-3</span> 貸出履歴のビューを追加する
+    </h3>
+
+    <p>現在は「備品一覧」のビューしかないため、「貸出履歴」用のビューを新規作成します。貸出履歴はデータの一覧性が重要なので、<strong>Table View</strong>（表形式）を使います。</p>
+
+    <h4 class="sub-heading">■ 新しいビューを作成する</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p><strong>App</strong> → <strong>Views</strong> の画面で、左側の「PRIMARY NAVIGATION」の横にある <strong>「＋」</strong> ボタンをクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p>「Add a new view」のダイアログが表示されます。下部の <strong>「Create a new view」</strong> ボタンをクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">3</div>
+    <div class="proc-body">
+      <p><strong>「View name」</strong> に <strong>「貸出履歴」</strong> と入力します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">4</div>
+    <div class="proc-body">
+      <p><strong>「For this data」</strong> のドロップダウンから <strong>「貸出履歴」</strong> テーブルを選択します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">5</div>
+    <div class="proc-body">
+      <p><strong>「View type」</strong> のアイコン一覧から <strong>「table」</strong> を選択します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">6</div>
+    <div class="proc-body">
+      <p><strong>「Position」</strong> のボタン一覧から <strong>「next」</strong> を選択します（備品一覧の隣に配置されます）。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">7</div>
+    <div class="proc-body">
+      <p>下にスクロールして <strong>「View Options」</strong> セクションを開き、<strong>「Sort by」</strong> の <strong>「Add」</strong> ボタンをクリックします。カラムに <strong>「貸出日」</strong> を選択し、順序を <strong>「Descending」</strong>（新しい順）に設定します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">8</div>
+    <div class="proc-body">
+      <p>右上の <strong>「Save」</strong> ボタンで保存します。</p>
+    </div>
+  </div>
+</div>
+
+
+    <figure class="figure">
+      <img src="images/ch04-03-01.png"
+           alt="New Viewの設定画面。View name = 貸出履歴、For this data = 貸出履歴、View type = table"
+           style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図4-3-1：貸出履歴ビューの作成</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ Table Viewの表示設定</h4>
+
+    <table class="data-table left-align">
+  <thead>
+    <tr><th style="width:180px;">設定項目</th><th>設定値</th><th>説明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td style="text-align:left;">View type</td><td>table</td><td>表形式の一覧表示</td></tr>
+    <tr><td style="text-align:left;">For this data</td><td>貸出履歴</td><td>表示するテーブル</td></tr>
+    <tr><td style="text-align:left;">Sort by</td><td>貸出日 - Descending</td><td>新しい貸出順に表示</td></tr>
+    <tr><td style="text-align:left;">Position</td><td>next</td><td>備品一覧の隣に配置</td></tr>
+  </tbody>
+</table>
+
+    <figure class="figure">
+      <img src="images/ch04-03-02.png"
+           alt="貸出履歴のTable Viewがプレビューに表形式で表示されている画面"
+           class="sharp">
+      <figcaption>図4-3-2：貸出履歴のTable View（プレビュー）</figcaption>
+    </figure>
+
+
+    <div class="point-box">
+      <strong>Deck View と Table View の使い分け：</strong><br>
+      ・<strong>Deck View</strong> … 画像やメイン情報を目立たせたいとき（備品一覧向き）<br>
+      ・<strong>Table View</strong> … 多くの項目を一覧で比較したいとき（貸出履歴向き）
+    </div>
+
+
+<!-- ============================================================ -->
+<!-- 4-4 Detail View と Form View を確認する -->
+<!-- ============================================================ -->
+<h3 class="section-heading" id="sec4-4">
+  <span class="sec-num">4-4</span> Detail View と Form View を確認する
+</h3>
+
+<p>Detail View（詳細画面）と Form View（入力画面）はAppSheetが <strong>自動で生成</strong> します。左サイドバーの下部にある <strong>「SYSTEM GENERATED」</strong> セクションに格納されています。ここでは場所の確認と、プレビューでの動作確認を行います。</p>
+
+<h4 class="sub-heading">■ SYSTEM GENERATED の場所を確認する</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p><strong>App</strong> → <strong>Views</strong> の画面で、左サイドバーを下にスクロールします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p><strong>「SYSTEM GENERATED」</strong> セクションに以下のビューが自動作成されていることを確認します。</p>
+    </div>
+  </div>
+</div>
+
+<table class="data-table left-align">
+  <thead>
+    <tr><th style="width:200px;">ビュー名</th><th style="width:100px;">種類</th><th>役割</th></tr>
+  </thead>
+  <tbody>
+    <tr><td style="text-align:left;">貸出履歴_Detail</td><td>Detail</td><td>貸出1件の詳細情報を表示する画面</td></tr>
+    <tr><td style="text-align:left;">貸出履歴_Form</td><td>Form</td><td>貸出データの新規追加・編集用フォーム</td></tr>
+    <tr><td style="text-align:left;">貸出履歴_Inline</td><td>Inline</td><td>備品の詳細画面内に埋め込まれる貸出履歴一覧</td></tr>
+    <tr><td style="text-align:left;">備品一覧_Detail</td><td>Detail</td><td>備品1件の詳細情報を表示する画面</td></tr>
+    <tr><td style="text-align:left;">備品一覧_Form</td><td>Form</td><td>備品データの新規追加・編集用フォーム</td></tr>
+  </tbody>
+</table>
+
+    <figure class="figure">
+      <img src="images/ch04-04-01.png"
+           alt="左サイドバー下部の「SYSTEM GENERATED」セクションに、_Detail / _Form / _Inline のビューが一覧表示されている画面"
+           class="sharp">
+      <figcaption>図4-4-1：SYSTEM GENERATEDのビュー一覧</figcaption>
+    </figure>
+
+
+<div class="point-box">
+  SYSTEM GENERATEDのビューは <strong>自動で作成・管理</strong> されるため、基本的には手動で作成する必要はありません。設定を変更したい場合のみクリックして編集します。
+</div>
+
+<h4 class="sub-heading">■ Detail View をプレビューで確認する</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p>プレビュー画面で <strong>「備品一覧」</strong> の任意のカードをタップします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p>備品の詳細画面（Detail View）が表示されます。備品名、カテゴリ、設置場所、数量などの情報が縦に並んで表示されていることを確認します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">3</div>
+    <div class="proc-body">
+      <p>画面下部に、Refで紐づけた <strong>「貸出履歴」のインラインビュー</strong> が自動的に表示されていることを確認します（第3章で設定したVirtual Columnによるもの）。</p>
+    </div>
+  </div>
+</div>
+
+    <figure class="figure">
+      <img src="images/ch04-04-02.png"
+           alt="備品の詳細画面（Detail View）。備品情報の下に、その備品に紐づく貸出履歴がインラインで表示されている"
+           class="sharp">
+      <figcaption>図4-4-2：備品の詳細画面（貸出履歴のインラインビュー付き）</figcaption>
+    </figure>
+
+
+<h4 class="sub-heading">■ Form View をプレビューで確認する</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p>プレビュー画面で「貸出履歴」の <strong>「＋」ボタン</strong>（新規追加）をタップします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p>入力フォーム（Form View）が表示されます。「備品ID」がドロップダウン（Refによる参照）、「貸出日」「返却予定日」がカレンダー入力になっていることを確認します。</p>
+    </div>
+  </div>
+</div>
+
+<figure class="figure">
+      <img src="images/ch04-04-03.png"
+           alt="貸出履歴の入力フォーム（Form View）。備品IDがドロップダウン、日付がカレンダー入力"
+           class="sharp">
+      <figcaption>図4-4-3：貸出履歴の入力フォーム</figcaption>
+    </figure>
+
+
+<h4 class="sub-heading">■ Detail View の表示順を変更する（任意）</h4>
+
+<p>Detail Viewのカラム表示順を変更したい場合は、SYSTEM GENERATEDから設定を変更できます。</p>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p>左サイドバーの「SYSTEM GENERATED」から、変更したいビュー（例：<strong>「貸出履歴_Detail」</strong>）をクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p><strong>「View Options」</strong> セクションの <strong>「Column order」</strong> で <strong>「Manual」</strong> を選択します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">3</div>
+    <div class="proc-body">
+      <p>表示されたカラム名の一覧を <strong>ドラッグ＆ドロップ</strong> で並べ替えます。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">4</div>
+    <div class="proc-body">
+      <p>右上の <strong>「Save」</strong> ボタンで保存します。</p>
+    </div>
+  </div>
+</div>
+
+<figure class="figure">
+      <img src="images/ch04-04-04.png"
+           alt="「貸出履歴_Detail」のView Options > Column order で「Manual」を選択し、カラム順をドラッグで変更している画面"
+           class="sharp">
+      <figcaption>図4-4-4：Column orderでカラム表示順を変更</figcaption>
+    </figure>
+
+
+<div class="note-box">
+  Column orderの変更はDetail Viewにのみ反映されます。Form Viewの表示順も変更したい場合は、同様に <strong>「貸出履歴_Form」</strong> をクリックして同じ操作を行ってください。
+</div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-5 ナビゲーションメニューを整理する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-5">
+      <span class="sec-num">4-5</span> ナビゲーションメニューを整理する
+    </h3>
+
+    <p>アプリ下部のナビゲーションメニュー（タブバー）に表示するビューを設定します。ユーザーがメニューをタップして画面を切り替える仕組みです。</p>
+
+    <h4 class="sub-heading">■ ナビゲーションの仕組み</h4>
+
+    <p>ビューの <strong>「Position」</strong> 設定でナビゲーションへの表示を制御します。</p>
+
+    <!-- ナビデモ -->
+    <div class="nav-demo">
+      <div class="nav-item active">
+        <span class="nav-icon">📦</span>
+        <span class="nav-label">備品一覧</span>
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">貸出履歴</span>
+      </div>
+    </div>
+
+    <table class="data-table left-align">
+  <thead>
+    <tr><th style="width:120px;">Position</th><th>動作</th></tr>
+  </thead>
+  <tbody>
+    <tr><td style="text-align:left;">first</td><td>ナビゲーションの一番左（ホーム画面の役割）</td></tr>
+    <tr><td style="text-align:left;">next</td><td>前のビューの右隣に配置</td></tr>
+    <tr><td style="text-align:left;">middle</td><td>ナビゲーションの中間に配置</td></tr>
+    <tr><td style="text-align:left;">later</td><td>中間よりも右寄りに配置</td></tr>
+    <tr><td style="text-align:left;">last</td><td>ナビゲーションの一番右に配置</td></tr>
+    <tr><td style="text-align:left;">menu</td><td>ハンバーガーメニュー内に格納（ナビバーに直接表示しない）</td></tr>
+    <tr><td style="text-align:left;">ref</td><td>ナビゲーションに表示しない（他のビューから参照される場合用）</td></tr>
+  </tbody>
+</table>
+
+    <h4 class="sub-heading">■ 各ビューのPosition設定</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>App</strong> → <strong>Views</strong> で各ビューの設定を開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>以下の通りにPositionを設定してください。</p>
+        </div>
+      </div>
+    </div>
+
+    <table class="data-table left-align">
+  <thead>
+    <tr><th style="width:160px;">ビュー名</th><th style="width:120px;">Position</th><th style="width:140px;">View Icon</th><th>説明</th></tr>
+  </thead>
+  <tbody>
+    <tr><td style="text-align:left;">備品一覧</td><td>first</td><td>box（📦）</td><td>ホーム画面として一番左に配置</td></tr>
+    <tr><td style="text-align:left;">貸出履歴</td><td>next</td><td>clipboard（📋）</td><td>備品一覧の隣に配置</td></tr>
+  </tbody>
+</table>
+
+    <div class="procedure" style="margin-top:12px;">
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>「View icon」</strong> を設定するには、ビュー設定画面の「Display」セクションにある <strong>「Icon」</strong> をクリックしてアイコンを選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>「Save」</strong> ボタンで保存します。プレビュー下部のナビゲーションに2つのメニューが表示されることを確認します。</p>
+        </div>
+      </div>
+    </div>
+
+<figure class="figure">
+      <img src="images/ch04-05-01.png"
+           alt="プレビュー画面の下部ナビゲーションに「備品一覧」「貸出履歴」の2つのメニューが表示されている"
+           class="sharp">
+      <figcaption>図4-5-1：ナビゲーションメニューの表示</figcaption>
+    </figure>
+
+
+    <div class="warn-box">
+      不要なビューがナビゲーションに表示される場合は、そのビューのPositionを <strong>「ref」</strong> に変更するか、ビュー自体を削除してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-6 アプリのブランディング（テーマ・アイコン） -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-6">
+      <span class="sec-num">4-6</span> アプリのブランディング（テーマ・アイコン）
+    </h3>
+
+    <p>アプリの見た目を整えて、より使いやすく見栄えの良いアプリにしましょう。AppSheetの <strong>Settings</strong> メニューからテーマカラーやアプリアイコンを設定できます。</p>
+
+    <h4 class="sub-heading">■ テーマカラーの設定</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左ナビゲーションの <strong>「Settings」</strong>（⚙️） → <strong>「Theme & Brand」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「Primary color」</strong> でアプリのメインカラーを設定します。ヘッダーやボタンの色が変わります。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>プレビューで色の変化を確認し、<strong>「Save」</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:180px;">設定項目</th><th>推奨値</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">Primary color</td><td><span class="color-sample" style="background:#1a56a0;"></span> #1A56A0（お好みで）</td><td>ヘッダー・ボタン・リンクの色</td></tr>
+        <tr><td style="text-align:left;">App logo</td><td>会社ロゴ画像（196×196px推奨）</td><td>ヘッダー左に表示されるアイコン</td></tr>
+        <tr><td style="text-align:left;">Background image</td><td>（任意）</td><td>アプリの背景画像</td></tr>
+      </tbody>
+    </table>
+
+<figure class="figure">
+      <img src="images/ch04-06-01.png"
+           alt="Theme & Brand の設定画面。Primary colorやApp logoの設定箇所"
+           class="sharp">
+      <figcaption>図4-6-1：テーマ・ブランディングの設定画面</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ アプリ名の変更</h4>
+
+<div class="procedure">
+  <div class="proc-step">
+    <div class="proc-num">1</div>
+    <div class="proc-body">
+      <p>左ナビゲーションの <strong>「Settings」</strong>（⚙️） → <strong>「Information」</strong> をクリックします。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">2</div>
+    <div class="proc-body">
+      <p>「App Properties」セクションの <strong>「Short Name」</strong> を <strong>「備品管理アプリ」</strong> に変更します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">3</div>
+    <div class="proc-body">
+      <p>必要に応じて <strong>「Short Description」</strong> に簡単な説明（例：「社内備品の管理・貸出を行うアプリ」）を入力します。</p>
+    </div>
+  </div>
+  <div class="proc-step">
+    <div class="proc-num">4</div>
+    <div class="proc-body">
+      <p>右上の <strong>「Save」</strong> ボタンで保存します。</p>
+    </div>
+  </div>
+</div>
+
+<figure class="figure">
+      <img src="images/ch04-06-02.png"
+           alt="Information > App Properties でShort Nameを「備品管理アプリ」に変更している画面"
+           class="sharp">
+      <figcaption>図4-6-2：アプリ名の変更</figcaption>
+    </figure>
+
+
+    <div class="point-box">
+      テーマカラーやアプリ名は後からいつでも変更できます。まずはデフォルトのままでも問題ありません。デザインよりも<strong>データ設定とビュー設定を正しく行うこと</strong>を優先しましょう。
+    </div>
+
+
+    <!-- ===== 第4章まとめ ===== -->
+    <h4 class="sub-heading">■ 第4章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:240px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">ビュータイプの理解</td><td>一覧→詳細→入力フォームの基本遷移パターン</td></tr>
+        <tr><td>2</td><td style="text-align:left;">備品一覧のDeck View設定</td><td>カード形式で見やすく、カテゴリでグループ化</td></tr>
+        <tr><td>3</td><td style="text-align:left;">貸出履歴のTable View追加</td><td>表形式で一覧性を重視</td></tr>
+        <tr><td>4</td><td style="text-align:left;">Detail View・Form View確認</td><td>自動生成されるので動作確認のみ</td></tr>
+        <tr><td>5</td><td style="text-align:left;">ナビゲーションメニュー設定</td><td>Positionで表示位置を制御</td></tr>
+        <tr><td>6</td><td style="text-align:left;">ブランディング設定</td><td>テーマカラー・アプリ名・ロゴの変更</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      次の章に進む前に、プレビュー画面で以下を確認してください：<br>
+      ・ナビゲーションメニューに「備品一覧」「貸出履歴」の2つが表示されている<br>
+      ・備品一覧がカード形式で表示されている<br>
+      ・備品をタップすると詳細画面が表示される<br>
+      ・「＋」ボタンで入力フォームが表示される
+    </div>
+
+    <!-- ===== ページナビ ===== -->
+    <nav class="page-nav">
+      <a href="chapter03.html">← 第3章：アプリを作ろう</a>
+      <a href="chapter05.html">第5章：便利な機能を追加しよう →</a>
+    </nav>
+
+  </main>
+
+  <!-- ===== フッター ===== -->
+  <footer class="site-footer">
+    AppSheet 初級編 マニュアル ─ 社内限定 ─ 最終更新：2026年3月
+  </footer>
+
+</div>
+</body>
+</html>
