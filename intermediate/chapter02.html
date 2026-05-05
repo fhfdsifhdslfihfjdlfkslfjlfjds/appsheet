@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第2章：データを設計しよう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #ffcc80; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #fce4b8; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #e65100; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* タイプバッジ */
+  .type-badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #fff; }
+  .type-badge.text { background: #3498db; }
+  .type-badge.name { background: #2ecc71; }
+  .type-badge.number { background: #e67e22; }
+  .type-badge.date { background: #9b59b6; }
+  .type-badge.datetime { background: #8e44ad; }
+  .type-badge.time { background: #6c3483; }
+  .type-badge.image { background: #1abc9c; }
+  .type-badge.enum { background: #e74c3c; }
+  .type-badge.ref { background: #c0392b; }
+  .type-badge.email { background: #2980b9; }
+  .type-badge.virtual { background: #95a5a6; }
+
+  /* コピーブロック */
+  .copy-block { margin: 12px 0 24px; border: 2px solid #e65100; border-radius: 8px; background: #fef8f0; overflow: hidden; }
+  .copy-block button {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin: 12px 16px 8px; padding: 7px 18px;
+    background: #e65100; color: #fff; border: none; border-radius: 5px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: background .2s;
+  }
+  .copy-block button:hover { background: #bf4500; }
+  .copy-block pre {
+    margin: 0; padding: 14px 20px 18px;
+    font-family: 'Consolas', 'Courier New', monospace; font-size: 12.5px; line-height: 1.7;
+    color: #333; background: #fff; border-top: 1px solid #ffcc80; overflow-x: auto; white-space: pre;
+  }
+
+  /* コードブロック */
+  code { background: #fff3e0; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c0392b; }
+
+  /* Ref概念図（横並び固定） */
+  .ref-diagram {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    margin: 28px 0 32px; padding: 28px 20px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .ref-table-box {
+    background: #fff; border: 2px solid #e65100; border-radius: 10px;
+    overflow: hidden; flex: 1; min-width: 0;
+    box-shadow: 0 3px 10px rgba(230,81,0,.1);
+  }
+  .ref-table-box .ref-table-header {
+    background: #e65100; color: #fff; text-align: center;
+    font-weight: 700; font-size: 14px; padding: 8px 16px;
+  }
+  .ref-table-box .ref-table-body { padding: 12px 16px; font-size: 13px; line-height: 1.8; }
+  .ref-table-box .ref-table-body .ref-key { color: #e74c3c; font-weight: 700; }
+  .ref-table-box .ref-table-body .ref-col { color: #e65100; font-weight: 700; }
+  .ref-connector {
+    display: flex; flex-direction: column; align-items: center;
+    flex-shrink: 0; padding: 0 12px;
+  }
+  .ref-connector .conn-label { font-size: 11px; color: #e65100; font-weight: 700; margin-top: 6px; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #e65100; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第2章：データを設計しよう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">2</div>
+      <h2>データを設計しよう</h2>
+      <div class="chapter-sub">データ設計編 ─ 3テーブル構成のアプリを構築する</div>
+    </div>
+
+    <!-- ★変更：進捗バー 8→9ステップ -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">全体像</div></div>
+        <div class="progress-step active"><div class="dot">2</div><div class="label">データ設計</div></div>
+        <div class="progress-step"><div class="dot">3</div><div class="label">入力制御</div></div>
+        <div class="progress-step"><div class="dot">4</div><div class="label">Slice</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">関数</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Action</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec2-1">
+          <span class="toc-num">2-1</span>
+          <span class="toc-text"><strong>スプレッドシートでデータを準備する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-2">
+          <span class="toc-num">2-2</span>
+          <span class="toc-text"><strong>AppSheetアプリを生成し、テーブルを取り込む</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-3">
+          <span class="toc-num">2-3</span>
+          <span class="toc-text"><strong>カラム型（データ型）を設定する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-4">
+          <span class="toc-num">2-4</span>
+          <span class="toc-text"><strong>Ref（リレーション）を設定する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-5">
+          <span class="toc-num">2-5</span>
+          <span class="toc-text"><strong>Initial Value と KEY / LABEL を設定する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-6">
+          <span class="toc-num">2-6</span>
+          <span class="toc-text"><strong>ビューを作成して動作確認する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-1 スプレッドシートでデータを準備する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-1">
+      <span class="sec-num">2-1</span> スプレッドシートでデータを準備する
+    </h3>
+
+    <p>第1章で設計した3テーブル（社員マスタ・勤怠記録・休暇申請）をGoogleスプレッドシートに作成します。</p>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 練習用ファイルを使う場合</div>
+      第1章の「練習用ファイル」からサンプルデータ入りのスプレッドシートをコピー済みの方は、以下のデータ入力手順をスキップして <a href="#sec2-2" style="color:#e65100;">2-2「AppSheetアプリを生成し、テーブルを取り込む」</a> に進んでください。
+    </div>
+
+    <h4 class="sub-heading">■ 新しいスプレッドシートを作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Google ドライブ</strong>（https://drive.google.com）を開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>左上の <strong>「+ 新規」→「Google スプレッドシート」→「空白のスプレッドシート」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>ファイル名を <strong>「勤怠管理アプリ_データ」</strong> に変更します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ シート①「社員マスタ」を作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>画面下部のシートタブ名「シート1」をダブルクリックして、<strong>「社員マスタ」</strong> に名前を変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>下の枠内をすべて選択してコピーし、スプレッドシートの <strong>A1セル</strong> に貼り付けてください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="copy-block">
+      <button onclick="copyData('staff-data')">📋 コピーする</button>
+      <pre id="staff-data">社員ID	氏名	部署	メールアドレス	入社日
+E001	田中太郎	営業部	tanaka@example.com	2022/04/01
+E002	佐藤花子	総務部	sato@example.com	2023/04/01
+E003	鈴木一郎	開発部	suzuki@example.com	2021/10/01
+E004	高橋美咲	営業部	takahashi@example.com	2024/04/01
+E005	伊藤健一	開発部	ito@example.com	2022/10/01</pre>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch02-01-01.png" alt="社員マスタシートの完成例" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図2-1-1：「社員マスタ」シートの完成例（5名のサンプルデータ）</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ シート②「勤怠記録」を作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>画面下部の <strong>「＋」</strong> ボタンをクリックして新しいシートを追加し、名前を <strong>「勤怠記録」</strong> に変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>下の枠内をコピーし、A1セルに貼り付けてください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="copy-block">
+      <button onclick="copyData('attendance-data')">📋 コピーする</button>
+      <pre id="attendance-data">記録ID	社員ID	日付	出勤時刻	退勤時刻	メモ
+A001	E001	2026/04/01	9:00	18:00	
+A002	E002	2026/04/01	8:30	15:30	時短勤務
+A003	E003	2026/04/01	9:15	18:30	
+A004	E004	2026/04/01	9:00	18:00	
+A005	E005	2026/04/01	10:00	19:00	フレックス
+A006	E001	2026/04/02	9:00	20:00	残業
+A007	E002	2026/04/02	8:30	17:00	
+A008	E003	2026/04/02	9:00		勤務中
+A009	E001	2026/04/03	9:00	19:30	残業
+A010	E004	2026/04/03	9:30	14:00	早退</pre>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch02-01-02.png" alt="勤怠記録シートの完成例" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図2-1-2：「勤怠記録」シートの完成例（10件のサンプルデータ）</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ さまざまな勤務パターンのテストデータ</div>
+      サンプルデータには、第5章（関数）と第6章（Format Rules）の動作確認ができるよう、以下の4パターンを含めています。<br>
+      ・<strong>残業あり</strong>（9時間以上）：A006（11h）、A009（10.5h）<br>
+      ・<strong>通常勤務</strong>（8〜9時間）：A001（9h）、A003（9.25h）、A004（9h）、A005（9h）、A007（8.5h）<br>
+      ・<strong>時短勤務</strong>（8時間未満）：A002（7h）、A010（4.5h）<br>
+      ・<strong>勤務中</strong>（退勤時刻が空欄）：A008
+    </div>
+
+
+    <h4 class="sub-heading">■ シート③「休暇申請」を作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>同様に新しいシートを追加し、名前を <strong>「休暇申請」</strong> に変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>下の枠内をコピーし、A1セルに貼り付けてください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="copy-block">
+      <button onclick="copyData('leave-data')">📋 コピーする</button>
+      <pre id="leave-data">申請ID	社員ID	申請日	休暇種別	開始日	終了日	理由	承認ステータス
+V001	E001	2026/03/25	有給休暇	2026/04/10	2026/04/10	私用	承認済み
+V002	E003	2026/03/28	有給休暇	2026/04/15	2026/04/16	旅行	申請中
+V003	E002	2026/04/01	慶弔休暇	2026/04/05	2026/04/07	法事	申請中
+V004	E005	2026/04/02	有給休暇	2026/04/20	2026/04/20	通院	承認済み
+V005	E004	2026/04/03	特別休暇	2026/05/01	2026/05/02	研修参加	申請中</pre>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch02-01-03.png" alt="休暇申請シートの完成例" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図2-1-3：「休暇申請」シートの完成例（5件のサンプルデータ）</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ データ入力の確認</h4>
+
+    <ul class="checklist">
+      <li>スプレッドシートのファイル名を「勤怠管理アプリ_データ」に設定した</li>
+      <li>シート名が「社員マスタ」「勤怠記録」「休暇申請」の3つになっている</li>
+      <li>各シートの1行目にヘッダー行（項目名）が入力されている</li>
+      <li>「社員マスタ」に5名分のデータがある</li>
+      <li>「勤怠記録」に10件分のデータがある</li>
+      <li>「休暇申請」に5件分のデータがある</li>
+      <li>セルの結合を使っていない</li>
+      <li>データの途中に空白行がない</li>
+    </ul>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-2 AppSheetアプリを生成し、テーブルを取り込む -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-2">
+      <span class="sec-num">2-2</span> AppSheetアプリを生成し、テーブルを取り込む
+    </h3>
+
+    <p>スプレッドシートからAppSheetアプリを生成し、3つのテーブルをすべて取り込みます。</p>
+
+    <h4 class="sub-heading">■ アプリを作成する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>「勤怠管理アプリ_データ」スプレッドシートを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>メニューバーの <strong>「拡張機能」→「AppSheet」→「アプリを作成」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>AppSheetエディタが開き、最初のシートのテーブルが自動で取り込まれます。</p>
+        </div>
+      </div>
+    </div>
+
+
+    <h4 class="sub-heading">■ 残りのテーブルを追加する</h4>
+
+    <p>アプリ作成直後は1つのテーブルしか取り込まれていない場合があります。残りのテーブルを追加します。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左ナビゲーションの <strong>「Data」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>テーブル一覧の左上にある <strong>「+」（Add new table）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>「Google Sheets」</strong> を選択し、同じスプレッドシート内の未追加シートを選んで <strong>「Add」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>3つのテーブル（<strong>社員マスタ・勤怠記録・休暇申請</strong>）がすべて表示されるまで繰り返します。</p>
+        </div>
+      </div>
+    </div>
+
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意</div>
+      既に3つのテーブルが自動で取り込まれている場合は、追加操作は不要です。Data画面のテーブル一覧を確認してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-3 カラム型（データ型）を設定する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-3">
+      <span class="sec-num">2-3</span> カラム型（データ型）を設定する
+    </h3>
+
+    <p>各テーブルのカラム型を確認・修正します。初級編と同じ要領ですが、中級編では <strong>Time型</strong>（時刻）や <strong>Email型</strong> など、新しい型も使用します。</p>
+
+    <h4 class="sub-heading">■ 「社員マスタ」テーブルのカラム型</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:150px;">カラム名</th><th style="width:120px;">設定するTYPE</th><th style="width:70px;">KEY</th><th style="width:70px;">LABEL</th><th>補足</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">社員ID</td><td><span class="type-badge text">Text</span></td><td>✅ ON</td><td>—</td><td>一意のID</td></tr>
+        <tr><td style="text-align:left;">氏名</td><td><span class="type-badge name">Name</span></td><td>—</td><td>✅ ON</td><td>アプリ上の表示名になる</td></tr>
+        <tr><td style="text-align:left;">部署</td><td><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td>営業部 / 総務部 / 開発部</td></tr>
+        <tr><td style="text-align:left;">メールアドレス</td><td><span class="type-badge email">Email</span></td><td>—</td><td>—</td><td>Automation のメール送信先に使用</td></tr>
+        <tr><td style="text-align:left;">入社日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>日付型</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 「勤怠記録」テーブルのカラム型</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:150px;">カラム名</th><th style="width:120px;">設定するTYPE</th><th style="width:70px;">KEY</th><th style="width:70px;">LABEL</th><th>補足</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">記録ID</td><td><span class="type-badge text">Text</span></td><td>✅ ON</td><td>✅ ON</td><td>Initial Value に UNIQUEID() を設定</td></tr>
+        <tr><td style="text-align:left;">社員ID</td><td><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td>⭐ 2-4 で Ref 設定（参照先：社員マスタ）</td></tr>
+        <tr><td style="text-align:left;">日付</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>勤務日</td></tr>
+        <tr><td style="text-align:left;">出勤時刻</td><td><span class="type-badge time">Time</span></td><td>—</td><td>—</td><td>時刻型（HH:MM）</td></tr>
+        <tr><td style="text-align:left;">退勤時刻</td><td><span class="type-badge time">Time</span></td><td>—</td><td>—</td><td>空欄 = 勤務中</td></tr>
+        <tr><td style="text-align:left;">メモ</td><td><span class="type-badge text">Text</span></td><td>—</td><td>—</td><td>備考欄</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 「休暇申請」テーブルのカラム型</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:150px;">カラム名</th><th style="width:120px;">設定するTYPE</th><th style="width:70px;">KEY</th><th style="width:70px;">LABEL</th><th>補足</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">申請ID</td><td><span class="type-badge text">Text</span></td><td>✅ ON</td><td>✅ ON</td><td>Initial Value に UNIQUEID() を設定</td></tr>
+        <tr><td style="text-align:left;">社員ID</td><td><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td>⭐ 2-4 で Ref 設定（参照先：社員マスタ）</td></tr>
+        <tr><td style="text-align:left;">申請日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>申請を行った日付</td></tr>
+        <tr><td style="text-align:left;">休暇種別</td><td><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td>有給休暇 / 慶弔休暇 / 特別休暇</td></tr>
+        <tr><td style="text-align:left;">開始日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>休暇の開始日</td></tr>
+        <tr><td style="text-align:left;">終了日</td><td><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td>休暇の終了日</td></tr>
+        <tr><td style="text-align:left;">理由</td><td><span class="type-badge text">Text</span></td><td>—</td><td>—</td><td>申請理由</td></tr>
+        <tr><td style="text-align:left;">承認ステータス</td><td><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td>申請中 / 承認済み / 差戻し</td></tr>
+      </tbody>
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>各テーブルをクリックし、上記の表の通りに <strong>TYPE</strong> を確認・修正します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>すべて設定したら、右上の <strong>「Save」</strong> ボタンで保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ Time 型について</div>
+      初級編では使わなかった <strong>Time 型</strong> が登場します。Time 型は「09:00」「18:30」のような時刻データを扱う型です。Date 型（日付）とは異なり、時分のみを管理します。出勤時刻・退勤時刻のカラムに設定してください。
+    </div>
+
+    <!-- ★変更：「第7章」→「第8章」 -->
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Email 型のメリット</div>
+      社員マスタの「メールアドレス」を <strong>Email 型</strong> に設定すると、アプリ上でメールアドレスをタップしたときに自動でメール作成画面が開きます。また、第8章の Automation でメール送信先として直接参照できるようになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-4 Ref（リレーション）を設定する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-4">
+      <span class="sec-num">2-4</span> Ref（リレーション）を設定する
+    </h3>
+
+    <p>「勤怠記録」と「休暇申請」の両方から「社員マスタ」を参照する <strong>複数Ref</strong> を設定します。これが中級編のデータ設計の核心です。</p>
+
+    <!-- Ref概念図 -->
+    <div class="ref-diagram">
+      <div class="ref-table-box">
+        <div class="ref-table-header">🕐 勤怠記録</div>
+        <div class="ref-table-body">
+          記録ID（KEY）<br>
+          <span class="ref-col">社員ID → Ref（社員マスタ）</span><br>
+          日付 / 出勤時刻 / 退勤時刻 …
+        </div>
+      </div>
+
+      <div class="ref-connector">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="0" y1="10" x2="60" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="0,4 -8,10 0,16" fill="#e65100"/>
+        </svg>
+        <span class="conn-label">Ref</span>
+      </div>
+
+      <div class="ref-table-box">
+        <div class="ref-table-header">👤 社員マスタ</div>
+        <div class="ref-table-body">
+          <span class="ref-key">社員ID（KEY）</span><br>
+          氏名（LABEL）<br>
+          部署 / メールアドレス …
+        </div>
+      </div>
+
+      <div class="ref-connector">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="0" y1="10" x2="60" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="60,4 68,10 60,16" fill="#e65100"/>
+        </svg>
+        <span class="conn-label">Ref</span>
+      </div>
+
+      <div class="ref-table-box">
+        <div class="ref-table-header">📝 休暇申請</div>
+        <div class="ref-table-body">
+          申請ID（KEY）<br>
+          <span class="ref-col">社員ID → Ref（社員マスタ）</span><br>
+          休暇種別 / 承認ステータス …
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 「勤怠記録」テーブルの社員IDにRefを設定する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → <strong>「勤怠記録」</strong> テーブルのカラム一覧を開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「社員ID」</strong> の TYPE をクリックし、<strong>「Ref」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>「Source table」</strong> で <strong>「社員マスタ」</strong> を選択し、<strong>「Done」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>「Save」</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 「休暇申請」テーブルの社員IDにRefを設定する</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>同様に <strong>Data</strong> → <strong>「休暇申請」</strong> テーブルの <strong>「社員ID」</strong> の TYPE を <strong>「Ref」</strong> に変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「Source table」</strong> で <strong>「社員マスタ」</strong> を選択し、<strong>「Done」</strong> → <strong>「Save」</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch02-04-01.png" alt="Ref設定画面" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図2-4-1：社員IDのRef設定（Source table = 社員マスタ）</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 複数Refのメリット</div>
+      「社員マスタ」をRefで参照することで、以下のメリットがあります：<br>
+      ・勤怠記録・休暇申請の入力時に、社員名を <strong>ドロップダウンから選択</strong> できる<br>
+      ・社員マスタの詳細画面から、その社員の <strong>勤怠記録と休暇申請を一覧表示</strong> できる<br>
+      ・社員の氏名や部署が変更されても、<strong>参照先（社員マスタ）を1箇所修正するだけ</strong> で全テーブルに反映される
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Virtual Column の自動生成</div>
+      Refを設定すると、「社員マスタ」テーブルに <strong>Virtual Column</strong>（Related 勤怠記録s / Related 休暇申請s）が自動生成されます。これにより、社員の詳細画面にその社員の勤怠記録と休暇申請がインラインで表示されるようになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-5 Initial Value と KEY / LABEL を設定する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-5">
+      <span class="sec-num">2-5</span> Initial Value と KEY / LABEL を設定する
+    </h3>
+
+    <p>初級編と同様に、KEY列の Initial Value に <code>UNIQUEID()</code> を設定します。中級編では2つのテーブルに設定が必要です。</p>
+
+    <h4 class="sub-heading">■ 設定対象</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">テーブル</th><th style="width:120px;">カラム</th><th style="width:160px;">Initial Value</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">勤怠記録</td><td>記録ID</td><td><code>UNIQUEID()</code></td><td>新規打刻時にIDを自動生成</td></tr>
+        <tr><td style="text-align:left;">休暇申請</td><td>申請ID</td><td><code>UNIQUEID()</code></td><td>新規申請時にIDを自動生成</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 設定手順（2テーブル分繰り返し）</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → 対象テーブルのカラム一覧で、KEYカラム（記録ID / 申請ID）の <strong>鉛筆マーク（✏️ Edit）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>詳細設定パネルを下にスクロールし、<strong>「Initial value」</strong> に <code>UNIQUEID()</code> と入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>「Save」</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ この設定を忘れないでください</div>
+      Initial Value を設定しないと、アプリからデータを追加したときにKEY列が空になり、行の追加に失敗します。<strong>「勤怠記録」と「休暇申請」の両方</strong> に設定してください。
+    </div>
+
+    <h4 class="sub-heading">■ 追加の Initial Value 設定</h4>
+
+    <p>利便性を上げるために、以下のカラムにも Initial Value を設定しておきましょう。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">テーブル</th><th style="width:130px;">カラム</th><th style="width:180px;">Initial Value</th><th>効果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">勤怠記録</td><td>日付</td><td><code>TODAY()</code></td><td>新規打刻時に今日の日付が自動入力</td></tr>
+        <tr><td style="text-align:left;">勤怠記録</td><td>出勤時刻</td><td><code>TIMENOW()</code></td><td>新規打刻時に現在時刻が自動入力</td></tr>
+        <tr><td style="text-align:left;">休暇申請</td><td>申請日</td><td><code>TODAY()</code></td><td>新規申請時に今日の日付が自動入力</td></tr>
+        <tr><td style="text-align:left;">休暇申請</td><td>承認ステータス</td><td><code>"申請中"</code></td><td>新規申請時に「申請中」が自動入力</td></tr>
+      </tbody>
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>上記の各カラムの鉛筆マーク（✏️ Edit）をクリックし、<strong>「Initial value」</strong> に式を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>すべて設定したら <strong>「Save」</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ TIMENOW() とは？</div>
+      <strong>TIMENOW()</strong> は、実行された時点の「現在時刻」を返す関数です。TODAY()（今日の日付）と組み合わせることで、出勤打刻ボタンを押した瞬間の日付と時刻が自動記録されます。
+    </div>
+
+
+    <h4 class="sub-heading">■ ID列をユーザーに見せない（SHOW? の設定）</h4>
+
+    <p>社員ID・記録ID・申請IDなどの <strong>KEY列</strong> は、AppSheet がデータを内部管理するために必要ですが、アプリを使う人にとっては意味のない英数字の羅列です。これらを画面に表示したままだと、一覧画面や詳細画面が見づらくなります。</p>
+
+    <div class="note-box">
+      <strong>💡 ポイント：</strong>KEY列の「SHOW?」をOFFにしても、データは削除されません。あくまで画面上の表示・非表示だけが変わります。
+    </div>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data</strong> をクリックし、対象テーブル（例：社員マスタ）を選択します。</p>
+        </div>
+      </div>
+
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>カラム一覧で <strong>「社員ID」</strong> の行にある <strong>SHOW?</strong> のトグルを <strong>OFF</strong>（灰色）にします。</p>
+        </div>
+      </div>
+
+     <div class="warn-box">
+      <strong>⚠ 警告メッセージが出ても問題ありません：</strong>
+      SHOW? を OFF にすると、画面上部にオレンジ色の警告メッセージ「Column Name '社員ID' in Schema '…' was set to be unsearchable because it is 'Hidden'」が表示されることがあります。これは「非表示にしたカラムは検索対象から外しました」という通知で、<strong>エラーではありません</strong>。そのまま作業を続けて問題ありません。
+      </div>
+
+      <figure class="figure">
+        <img src="images/ch02-05-01.png"
+             alt="SHOW? トグルをOFFにした状態"
+            >
+        <figcaption>図2-5-1：社員IDの SHOW? を OFF にした状態（画面に表示されなくなる）</figcaption>
+      </figure>
+
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>同様に、<strong>勤怠記録</strong> テーブルの「記録ID」、<strong>休暇申請</strong> テーブルの「申請ID」も SHOW? を <strong>OFF</strong> にします。</p>
+        </div>
+      </div>
+
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <p>以下の表に、各テーブルで非表示にすべきカラムをまとめます。</p>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>テーブル</th>
+          <th>カラム名</th>
+          <th>SHOW?</th>
+          <th>理由</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>社員マスタ</td>
+          <td>社員ID</td>
+          <td><strong style="color:#e74c3c;">OFF</strong></td>
+          <td>内部管理用のKEY。ユーザーに見せる必要なし</td>
+        </tr>
+        <tr>
+          <td>勤怠記録</td>
+          <td>記録ID</td>
+          <td><strong style="color:#e74c3c;">OFF</strong></td>
+          <td>UNIQUEID() で自動生成されるKEY</td>
+        </tr>
+        <tr>
+          <td>休暇申請</td>
+          <td>申請ID</td>
+          <td><strong style="color:#e74c3c;">OFF</strong></td>
+          <td>UNIQUEID() で自動生成されるKEY</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <strong>📌 初級編との違い：</strong>初級編では ID列の非表示設定に触れませんでしたが、テーブル数が増えると ID だらけの画面になりがちです。中級編では「ユーザーに見せる情報」と「システムが管理する情報」を意識的に分けることが重要です。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-6 ビューを作成して動作確認する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-6">
+      <span class="sec-num">2-6</span> ビューを作成して動作確認する
+    </h3>
+
+    <p>データ設定が完了したら、基本的なビューを作成してプレビューで動作確認します。</p>
+
+    <h4 class="sub-heading">■ 各テーブルのビュー設定</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">ビュー名</th><th style="width:100px;">View type</th><th style="width:100px;">Position</th><th>補足</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">勤怠記録</td><td>table</td><td>first</td><td>ホーム画面。出退勤データを表形式で表示</td></tr>
+        <tr><td style="text-align:left;">休暇申請</td><td>table</td><td>next</td><td>休暇申請を表形式で表示。承認ステータスが一覧で確認しやすい</td></tr>
+        <tr><td style="text-align:left;">社員マスタ</td><td>table</td><td>next</td><td>社員一覧。管理者が社員情報を確認する用</td></tr>
+      </tbody>
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左ナビゲーションの <strong>「App」→「Views」</strong> を開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>各ビューの <strong>View type</strong> と <strong>Position</strong> を上記の表の通りに設定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>「Save」</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ プレビューで動作確認</h4>
+
+    <p>設定が完了したら、プレビューで以下を確認してください。</p>
+
+    <ul class="checklist">
+      <li>ナビゲーションに「勤怠記録」「休暇申請」「社員マスタ」の3つが表示されている</li>
+      <li>勤怠記録の一覧にサンプルデータが表示されている</li>
+      <li>勤怠記録の「＋」ボタンをタップすると、社員IDがドロップダウンで選択できる</li>
+      <li>社員マスタの任意の社員をタップすると、詳細画面にその社員の勤怠記録と休暇申請がインライン表示される</li>
+      <li>休暇申請の一覧にサンプルデータが表示されている</li>
+    </ul>
+
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意</div>
+      社員IDのドロップダウンに社員名が表示されない場合は、社員マスタの <strong>「氏名」カラムが LABEL に設定されているか</strong> を確認してください。
+    </div>
+
+
+    <!-- ===== 第2章まとめ ===== -->
+    <h4 class="sub-heading">■ 第2章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:240px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">3シート構成のスプレッドシート作成</td><td>社員マスタ・勤怠記録・休暇申請の3テーブル</td></tr>
+        <tr><td>2</td><td style="text-align:left;">AppSheetアプリの生成とテーブル追加</td><td>拡張機能から作成 → 残りテーブルを手動追加</td></tr>
+        <tr><td>3</td><td style="text-align:left;">カラム型の設定</td><td>Time型・Email型・Enum型を新しく使用</td></tr>
+        <tr><td>4</td><td style="text-align:left;">複数Refの設定</td><td>勤怠記録・休暇申請の両方から社員マスタを参照</td></tr>
+        <tr><td>5</td><td style="text-align:left;">Initial Value の設定</td><td>UNIQUEID() / TODAY() / TIMENOW() で自動入力</td></tr>
+        <tr><td>6</td><td style="text-align:left;">ビュー作成と動作確認</td><td>3つのビューを作成しプレビューで確認</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 初級編との違いを振り返り</div>
+      初級編では2テーブル・1つのRefでしたが、中級編では <strong>3テーブル・2つのRef</strong> を設定しました。
+      マスタテーブル（社員マスタ）を中心に、複数のトランザクションテーブル（勤怠記録・休暇申請）が参照する構造は、業務アプリの基本パターンです。
+      この構造を理解すれば、顧客管理・注文管理・プロジェクト管理など、さまざまなアプリに応用できます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter01.html">← 第1章：アプリの全体像を知ろう</a>
+      <a href="chapter03.html">第3章：Valid If で入力制御しよう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+<script>
+function copyData(id) {
+  var el = document.getElementById(id);
+  var text = el.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = el.parentElement.querySelector('button');
+    var original = btn.innerHTML;
+    btn.innerHTML = '✅ コピーしました！';
+    btn.style.background = '#27ae60';
+    setTimeout(function() {
+      btn.innerHTML = original;
+      btn.style.background = '#e65100';
+    }, 2000);
+  });
+}
+</script>
+
+</body>
+</html>

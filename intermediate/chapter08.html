@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第8章：Automation を活用しよう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #ffcc80; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #fce4b8; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #e65100; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fff3e0; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c0392b; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 概念フロー図 */
+  .concept-flow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 28px 0 32px; padding: 28px 16px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.data   { background: linear-gradient(135deg, #1a56a0, #3a9bd5); }
+  .cf-icon.rule   { background: linear-gradient(135deg, #e65100, #fb8c00); }
+  .cf-icon.result { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-icon.bot    { background: linear-gradient(135deg, #16a085, #1abc9c); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding: 0 6px; }
+  .cf-arrow .arrow-text { font-size: 10px; color: #e65100; font-weight: 700; margin-top: 5px; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #e65100; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+
+  /* 関数リファレンス表 */
+  .formula-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .formula-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; }
+  .formula-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; }
+  .formula-table td:first-child { text-align: center; font-weight: 600; }
+  .formula-table td code { white-space: nowrap; }
+  .formula-table tbody tr:hover { background: #fef8f0; }
+
+  /* メール本文プレビュー */
+  .mail-preview {
+    background: #fff; border: 1px solid #d4dce8; border-radius: 8px;
+    padding: 20px 24px; margin: 16px 0 24px; font-size: 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.04);
+  }
+  .mail-preview .mail-header {
+    border-bottom: 1px solid #e0e6ef; padding-bottom: 10px; margin-bottom: 12px;
+    color: #666; font-size: 13px;
+  }
+  .mail-preview .mail-header .label { font-weight: 700; color: #333; display: inline-block; width: 50px; }
+  .mail-preview .mail-body { white-space: pre-wrap; line-height: 1.8; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第8章：Automation を活用しよう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">8</div>
+      <h2>Automation を活用しよう</h2>
+      <div class="chapter-sub">Automation編 ─ 状態遷移の通知と定刻起動でアプリを自動化する</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">全体像</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">データ設計</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">入力制御</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Slice</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">関数</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">書式</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Action</div></div>
+        <div class="progress-step active"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec8-1">
+          <span class="toc-num">8-1</span>
+          <span class="toc-text"><strong>この章で作る3つの Bot（中級編のポイント）</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec8-2">
+          <span class="toc-num">8-2</span>
+          <span class="toc-text"><strong>承認通知メール ─ 状態遷移を検知する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec8-3">
+          <span class="toc-num">8-3</span>
+          <span class="toc-text"><strong>差戻し通知メール ─ Bot のコピーで効率化</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec8-4">
+          <span class="toc-num">8-4</span>
+          <span class="toc-text"><strong>残業アラート ─ Scheduled Bot で定刻起動</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec8-5">
+          <span class="toc-num">8-5</span>
+          <span class="toc-text"><strong>Bot の動作確認とモニタリング</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec8-6">
+          <span class="toc-num">8-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 8-1 この章で作る3つの Bot -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec8-1">
+      <span class="sec-num">8-1</span> この章で作る3つの Bot（中級編のポイント）
+    </h3>
+
+    <p>Bot の基本（Automations メニューの開き方・Bot → Event → Process → Step の4階層構造・Data change type の意味・Send an email の基本設定・<code>&lt;&lt;[カラム名]&gt;&gt;</code> テンプレート記法など）は <strong>初級編 第5章</strong> で解説済みです。本章ではこれらの復習は最小限にとどめ、<strong>中級編ならではの Automation 活用</strong> に集中します。</p>
+
+    <div class="point-box">
+      <div class="point-title">📌 中級編で新しく扱うポイント</div>
+      <ul>
+        <li><strong>Event の Condition に式を入れて「状態遷移」を検知</strong>する（<code>[_THISROW_BEFORE]</code>）</li>
+        <li><strong>Scheduled Bot</strong>（定刻起動）で毎日決まった時刻に処理を走らせる</li>
+        <li><strong>Bot のコピー機能</strong> で、類似 Bot を効率よく量産する</li>
+        <li><strong>Audit history</strong> と <strong>Test（テスト実行）</strong> で Bot の動作を検証する</li>
+      </ul>
+    </div>
+
+    <h4 class="sub-heading">■ この章で作る Bot の全体像</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:170px;">Bot 名</th>
+          <th style="width:140px;">Event 種別</th>
+          <th>役割</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;"><strong>休暇_承認通知</strong></td><td style="text-align:left;">Data Change（Updates）</td><td style="text-align:left;">承認されたら申請者にメール通知</td></tr>
+        <tr><td>2</td><td style="text-align:left;"><strong>休暇_差戻し通知</strong></td><td style="text-align:left;">Data Change（Updates）</td><td style="text-align:left;">差戻されたら申請者にメール通知</td></tr>
+        <tr><td>3</td><td style="text-align:left;"><strong>残業アラート_日次</strong></td><td style="text-align:left;">Schedule（毎日20:00）</td><td style="text-align:left;">勤務10時間超の社員を総務部に通知</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 復習：Bot の構造（初級編のおさらい）</h4>
+
+    <p>初級編で学んだとおり、Bot は <strong>Event（いつ起動するか）→ Process（処理の枠）→ Step / Task（実際の処理）</strong> の3階層で構成されます。初級編では Event の Data change type に <strong>「Adds（行の追加）」</strong> を使いましたが、中級編では <strong>「Updates（行の更新）」</strong> と <strong>「Schedule（定刻起動）」</strong> を新たに使います。</p>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon data">⚡</div>
+        <div class="cf-label">Event</div>
+        <div class="cf-sub">いつ起動するか<br>Data Change / Schedule</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">トリガー</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon rule">🔄</div>
+        <div class="cf-label">Process</div>
+        <div class="cf-sub">処理の流れを<br>定義する枠</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">実行</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon bot">📧</div>
+        <div class="cf-label">Step（Task）</div>
+        <div class="cf-sub">実際の処理<br>（メール送信 など）</div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 復習が必要な方は</div>
+      Bot の作成手順や Send an email の基本設定に不安がある方は、先に <a href="../beginner/chapter05.html" style="color:#e65100; font-weight:700;">初級編 第5章</a> を確認してから本章に進むとスムーズです。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 無料プラン（プロトタイプ状態）の制限</div>
+      未デプロイ状態でも Bot の動作確認は可能ですが、<strong>メール送信数に1日あたりの上限（通常10通程度）</strong> があります。本章の学習には十分ですが、業務運用で大量送信するにはデプロイ（有料プラン）が必要です。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 8-2 承認通知メール ─ 状態遷移を検知する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec8-2">
+      <span class="sec-num">8-2</span> 承認通知メール ─ 状態遷移を検知する
+    </h3>
+
+    <p>第7章で作成した「承認する」Action で承認ステータスが「承認済み」に変わったら、<strong>申請者に承認通知メールを自動送信</strong> する Bot を作ります。初級編との最大の違いは、<strong>Event の Condition に「状態遷移」を検知する式を入れる</strong> 点です。</p>
+
+    <h4 class="sub-heading">■ なぜ Condition が必要なのか？</h4>
+
+    <p>初級編では Event の Condition を空欄にしました（行が追加されたら無条件に発火）。しかし今回は <strong>Updates（更新）</strong> をトリガーにするため、Condition なしだと <strong>承認ステータス以外のカラム（例：メモ）を編集しただけでもメールが送信</strong> されてしまいます。さらに、既に承認済みの行を別の理由で再保存するたびにメールが飛ぶことにもなります。</p>
+
+    <p>これを防ぐのが <strong><code>[_THISROW_BEFORE]</code></strong> です。</p>
+
+    <h4 class="sub-heading">■ 中級編のキモ：<code>[_THISROW_BEFORE]</code> で状態遷移を検知</h4>
+
+<pre><code>AND(
+  [承認ステータス] = "承認済み",
+  [_THISROW_BEFORE].[承認ステータス] &lt;&gt; "承認済み"
+)</code></pre>
+
+    <p><code>[_THISROW_BEFORE].[カラム名]</code> は <strong>更新直前の値</strong> を参照する特別な記法です。この式は「更新後は承認済み」かつ「更新前は承認済みでなかった」＝ <strong>承認済みに"変わった"瞬間</strong> にだけ TRUE になります。</p>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon data">📝</div>
+        <div class="cf-label">更新前</div>
+        <div class="cf-sub">承認ステータス<br>= 「申請中」</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">Action実行</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon result">✅</div>
+        <div class="cf-label">更新後</div>
+        <div class="cf-sub">承認ステータス<br>= 「承認済み」</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">発火！</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon bot">📧</div>
+        <div class="cf-label">メール送信</div>
+        <div class="cf-sub">申請者に<br>承認通知</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ Bot の設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:240px;">要素</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>Bot name</td><td><strong>休暇_承認通知</strong></td></tr>
+        <tr><td>Event - Table</td><td><strong>休暇申請</strong></td></tr>
+        <tr><td>Event - Data change type</td><td>Updates only</td></tr>
+        <tr><td><strong>Event - Condition</strong></td><td><code>AND([承認ステータス] = "承認済み", [_THISROW_BEFORE].[承認ステータス] <> "承認済み")</code></td></tr>
+        <tr><td>Step - Type</td><td>Send an email</td></tr>
+        <tr><td>Step - To</td><td><code>[社員ID].[メールアドレス]</code><br><span style="font-size:12px; color:#888;">※ テスト時は自分のアドレスを直接入力してもOK</span></td></tr>
+        <tr><td>Step - Subject</td><td><code>【承認】休暇申請が承認されました（<<[申請ID]>>）</code></td></tr>
+        <tr><td>Step - Body</td><td>後述のメールテンプレート参照</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 作成手順（要点のみ）</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Automations → <strong>「+ New Bot」→ 「Create a new bot」</strong> で Bot を作成し、名前を <strong>「休暇_承認通知」</strong> にします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>Configure event</strong> をクリックし、Table = <strong>休暇申請</strong>、Data change type = <strong>Updates only</strong> に設定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Condition</strong> 欄に次の式を入力します（ここが中級編のポイント）。</p>
+<pre><code>AND(
+  [承認ステータス] = "承認済み",
+  [_THISROW_BEFORE].[承認ステータス] &lt;&gt; "承認済み"
+)</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>「+ Add a step」→「Create a new step」</strong> で Step を追加し、<strong>Send an email</strong> を選択。To / Subject / Body を上記設定に従って入力し、<strong>Save</strong>。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ メールテンプレート</h4>
+
+    <p>Subject（件名）：</p>
+<pre><code>【承認】休暇申請が承認されました（&lt;&lt;[申請ID]&gt;&gt;）</code></pre>
+
+    <p>Body（本文）：</p>
+<pre><code>&lt;&lt;[社員ID].[氏名]&gt;&gt; さん
+
+いつもお疲れ様です。
+下記の休暇申請が承認されましたのでお知らせします。
+
+─────────────────────
+申請ID　　：&lt;&lt;[申請ID]&gt;&gt;
+休暇種別　：&lt;&lt;[休暇種別]&gt;&gt;
+開始日　　：&lt;&lt;[開始日]&gt;&gt;
+終了日　　：&lt;&lt;[終了日]&gt;&gt;
+理由　　　：&lt;&lt;[理由]&gt;&gt;
+─────────────────────
+
+当日はゆっくりお休みください。
+
+勤怠管理アプリ（自動送信）</code></pre>
+
+    <h4 class="sub-heading">■ 送信されるメールのイメージ</h4>
+
+    <div class="mail-preview">
+      <div class="mail-header">
+        <div><span class="label">To:</span>tanaka@example.com</div>
+        <div><span class="label">件名:</span>【承認】休暇申請が承認されました（V001）</div>
+      </div>
+      <div class="mail-body">田中太郎 さん
+
+いつもお疲れ様です。
+下記の休暇申請が承認されましたのでお知らせします。
+
+─────────────────────
+申請ID　　：V001
+休暇種別　：有給休暇
+開始日　　：2026/04/10
+終了日　　：2026/04/10
+理由　　　：私用
+─────────────────────
+
+当日はゆっくりお休みください。
+
+勤怠管理アプリ（自動送信）</div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch08-02-01.png" alt="承認通知BotのEvent Condition設定">
+      <figcaption>図8-2-1：Event の Condition に <code>[_THISROW_BEFORE]</code> を使った状態遷移判定を入力</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Ref を通じて別テーブルの値を参照する</div>
+      To 欄の <code>[社員ID].[メールアドレス]</code> は、休暇申請の「社員ID」カラム（Ref）を経由して社員マスタの「メールアドレス」を取得する書き方です。テンプレート記法の <code>&lt;&lt;[社員ID].[氏名]&gt;&gt;</code> も同じ仕組みです。第2章で設定した Ref のおかげで、関連テーブルの値を自在に引けるようになっています。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ テスト時の宛先について</div>
+      <code>[社員ID].[メールアドレス]</code> は、社員マスタに登録されたアドレス宛にメールが送信されます。テスト段階では <strong>社員マスタのメールアドレスを自分のアドレスに書き換えておく</strong> か、To 欄に自分のアドレスを直接入力してテストしてください。他人のアドレスにテストメールが飛ばないよう注意しましょう。本番運用に移す際に、正式なアドレスに戻してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 8-3 差戻し通知メール ─ Bot のコピーで効率化 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec8-3">
+      <span class="sec-num">8-3</span> 差戻し通知メール ─ Bot のコピーで効率化
+    </h3>
+
+    <p>8-2 と構造がほぼ同じ Bot を作ります。一から作り直す代わりに、<strong>Bot のコピー機能</strong> を使って効率よく量産します。</p>
+
+    <h4 class="sub-heading">■ 作成手順（コピーして差分だけ修正）</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Bots 一覧で <strong>「休暇_承認通知」の右にある「…」メニュー → 「Duplicate」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>コピーされた Bot 名を <strong>「休暇_差戻し通知」</strong> に変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>Event の Condition を次の式に書き換えます。</p>
+<pre><code>AND(
+  [承認ステータス] = "差戻し",
+  [_THISROW_BEFORE].[承認ステータス] &lt;&gt; "差戻し"
+)</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>Step の Subject と Body を下記に差し替えて <strong>Save</strong>。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 差戻しメールテンプレート</h4>
+
+    <p>Subject：</p>
+<pre><code>【差戻し】休暇申請が差戻されました（&lt;&lt;[申請ID]&gt;&gt;）</code></pre>
+
+    <p>Body：</p>
+<pre><code>&lt;&lt;[社員ID].[氏名]&gt;&gt; さん
+
+下記の休暇申請が差戻されましたのでご確認ください。
+内容を修正のうえ、再度申請してください。
+
+─────────────────────
+申請ID　　：&lt;&lt;[申請ID]&gt;&gt;
+休暇種別　：&lt;&lt;[休暇種別]&gt;&gt;
+開始日　　：&lt;&lt;[開始日]&gt;&gt;
+終了日　　：&lt;&lt;[終了日]&gt;&gt;
+理由　　　：&lt;&lt;[理由]&gt;&gt;
+─────────────────────
+
+ご不明な点は総務部までご連絡ください。
+
+勤怠管理アプリ（自動送信）</code></pre>
+
+    <div class="point-box">
+      <div class="point-title">📌 ポイント ─ コピー機能で似た Bot を効率量産</div>
+      承認/差戻し/取消など、テーブルと構造が同じで Condition とメール本文だけが違う Bot は、毎回一から作る必要はありません。<strong>コピーして差分だけ修正</strong> するのが効率的です。Event / Process / Step がまとめてコピーされるため、作り忘れや設定ミスも減ります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 8-4 残業アラート ─ Scheduled Bot で定刻起動 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec8-4">
+      <span class="sec-num">8-4</span> 残業アラート ─ Scheduled Bot で定刻起動
+    </h3>
+
+    <p>ここまでの Bot は「データが変更されたとき」に発火する Data Change Bot でした。3つ目の Bot は <strong>Scheduled Bot（定刻起動）</strong> です。毎日夜20時に、<strong>当日の勤怠記録で勤務時間が10時間以上の社員がいた場合</strong>、総務部に通知します。</p>
+
+    <h4 class="sub-heading">■ Data Change Bot との違い</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:200px;">比較項目</th><th>Data Change Bot（8-2, 8-3）</th><th>Scheduled Bot（8-4）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">起動のきっかけ</td><td style="text-align:left;">行の追加・更新・削除</td><td style="text-align:left;">指定した日時・間隔</td></tr>
+        <tr><td style="text-align:left;">対象データ</td><td style="text-align:left;">変更された行</td><td style="text-align:left;">テーブル全体（For each row in table で走査）</td></tr>
+        <tr><td style="text-align:left;">本章での用途</td><td style="text-align:left;">承認/差戻し → 申請者に通知</td><td style="text-align:left;">毎日20時 → 残業者がいれば総務部に通知</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Bot の設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:240px;">要素</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>Bot name</td><td><strong>残業アラート_日次</strong></td></tr>
+        <tr><td>Event - Event type</td><td><strong>Schedule</strong></td></tr>
+        <tr><td>Event - Frequency</td><td>Daily / 20:00 / Asia/Tokyo</td></tr>
+        <tr><td>Event - For each row in table</td><td><strong>ON</strong>（勤怠記録）</td></tr>
+        <tr><td><strong>Event - Condition</strong></td><td><code>AND([日付] = TODAY(), [勤務時間] >= 10)</code></td></tr>
+        <tr><td>Step - To</td><td>下記の式（総務部全員に送信）<br><span style="font-size:12px; color:#888;">※ テスト時は自分のアドレスを直接入力</span></td></tr>
+        <tr><td>Step - Subject</td><td><code>【残業アラート】<<[社員ID].[氏名]>> さんが本日10時間以上勤務</code></td></tr>
+        <tr><td>Step - Body</td><td>後述のメールテンプレート参照</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 作成手順（要点のみ）</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>「+ New Bot」</strong> で Bot を作成し、名前を <strong>「残業アラート_日次」</strong> にします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>Configure event で <strong>Event type を「Schedule」</strong> に切り替え、Frequency = <strong>Daily</strong>、Time = <strong>20:00</strong>、Time zone = <strong>Asia/Tokyo</strong> を指定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>For each row in table</strong> を ON にし、テーブルで <strong>勤怠記録</strong> を選択します。これにより、毎日20時に勤怠記録の全行に対して Condition が評価されます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Condition</strong> に次の式を入力します。</p>
+<pre><code>AND(
+  [日付] = TODAY(),
+  [勤務時間] &gt;= 10
+)</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>Step で <strong>Send an email</strong> を選択し、<strong>To</strong> に次の式を入力します。</p>
+<pre><code>CONCATENATE(
+  SELECT(社員マスタ[メールアドレス], [部署] = "総務部"),
+  ","
+)</code></pre>
+          <p>これで総務部の全メンバーに一斉送信されます。</p>
+          <p style="margin-top:8px; padding:10px 14px; background:#fefce8; border-left:3px solid #f9a825; border-radius:0 6px 6px 0; font-size:13px;">⚠️ <strong>テスト時は</strong>、この式の代わりに <strong>自分のメールアドレスを直接入力</strong> してください（例：<code>yourname@example.com</code>）。無料プランでは送信数に上限があり、複数人に不要なテストメールが飛ぶのを防げます。動作確認が取れたら本番用の式に差し替えてください。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p>Subject と Body を入力して <strong>Save</strong>。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ メールテンプレート（Body）</h4>
+
+<pre><code>総務部のみなさま
+
+下記の社員が本日10時間以上勤務しています。
+労務管理の観点からご確認ください。
+
+─────────────────────
+社員　　　：&lt;&lt;[社員ID].[氏名]&gt;&gt;（&lt;&lt;[社員ID].[部署]&gt;&gt;）
+日付　　　：&lt;&lt;[日付]&gt;&gt;
+出勤時刻　：&lt;&lt;[出勤時刻]&gt;&gt;
+退勤時刻　：&lt;&lt;[退勤時刻]&gt;&gt;
+勤務時間　：&lt;&lt;[勤務時間]&gt;&gt; 時間
+─────────────────────
+
+勤怠管理アプリ（自動送信）</code></pre>
+
+    <figure class="figure">
+      <img src="images/ch08-04-01.png" alt="Scheduled Bot の設定画面">
+      <figcaption>図8-4-1：Scheduled Bot の Event 設定（毎日20時に勤怠記録を走査）</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ SELECT() と CONCATENATE() の組み合わせ</div>
+      <code>SELECT(社員マスタ[メールアドレス], [部署] = "総務部")</code> は「社員マスタから総務部のメールアドレスをリストで取得する」式です。<code>CONCATENATE()</code> でカンマ区切りの文字列にすることで、メールの To 欄に複数宛先として渡せます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ 該当者が複数いる場合</div>
+      <strong>For each row in table</strong> が ON のため、条件に該当する行ごとにメールが送信されます。10時間超の社員が3人いれば、総務部宛に3通届きます。1通にまとめたい場合は Process の工夫が必要です（上級編で扱います）。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 「Scheduled event is only triggered when app is in deployed state」と表示された場合</div>
+      これは <strong>設定ミスではありません</strong>。Scheduled Bot は <strong>デプロイ済み（有料プラン）の状態でないと定刻に自動起動しない</strong> という仕様上の制限を知らせるメッセージです。プロトタイプ状態でも Bot の設定自体は問題なく保存でき、<strong>「Test」による手動テスト</strong> は正常に動作します。学習段階ではこの警告は無視して、手動テストで動作を確認してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 8-5 Bot の動作確認とモニタリング -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec8-5">
+      <span class="sec-num">8-5</span> Bot の動作確認とモニタリング
+    </h3>
+
+    <p>作成した Bot が正しく動いているか確認する方法を学びます。</p>
+
+    <h4 class="sub-heading">■ Audit History で実行ログを確認</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body"><p>左メニューの <strong>Monitor アイコン（📊）→ Audit history</strong> を開きます。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body"><p>実行された Bot の履歴が時系列で表示されます。フィルタで <strong>Event type = Bot</strong> に絞ると見やすくなります。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body"><p>各行をクリックすると、Event の詳細・実行時刻・Step の成功/失敗・送信先アドレスなどを確認できます。</p></div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ Test（テスト実行）で即座に確認</h4>
+
+    <p>Data Change Bot はプレビューでデータを変更すればトリガーできますが、Scheduled Bot は定刻まで待つ必要があります。<strong>「Test」</strong>（Bot の「…」メニュー内）を使えば即座にテスト実行できます。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body"><p>Bots 一覧で対象の Bot を開き、Event パネル右上の <strong>「…」メニュー →「Test」</strong> をクリックします。</p></div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>テスト結果画面に遷移し、対象テーブルの全行に対して <strong>Event Condition の評価結果</strong> が一覧表示されます。</p>
+          <p>各行の左側に <strong>「True」</strong> または <strong>「False」</strong> と表示されます。True は Condition を満たした行（Bot が発火する行）、False は満たさなかった行です。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>「True」の行</strong> にある <strong>「Execute」ボタン</strong> をクリックします。その行を対象に Bot の Step（メール送信など）が実際に実行されます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body"><p>メールの受信ボックスを確認し、テンプレート通りの内容が届いていれば成功です。</p></div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch08-05-01.png" alt="Testの結果画面（True/Falseの一覧とExecuteボタン）">
+      <figcaption>図8-5-1：Test 結果画面 ─ Condition が True の行の「Execute」を押すとメールが送信される</figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ False の行は無視してOK</div>
+      False は Event Condition を満たしていない行です。Execute ボタンは押せますが意図した動作にはならないため、<strong>True の行だけを Execute</strong> してください。
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 全行が False になった場合</div>
+      <strong>全行 False ＝ 設定ミスとは限りません。</strong>Condition を満たすデータがテーブル上に存在しないだけの可能性が高いです。例えば差戻し通知 Bot のテストでは、事前にプレビューで「差戻す」ボタンを押して <strong>差戻し操作を行ってから再度 Test を実行</strong> する必要があります。
+      <ul style="margin: 8px 0 0 18px;">
+        <li><strong>承認通知 Bot のテスト</strong>：先にプレビューで「承認する」ボタンを押す → Test</li>
+        <li><strong>差戻し通知 Bot のテスト</strong>：先にプレビューで「差戻す」ボタンを押す → Test</li>
+        <li><strong>残業アラート Bot のテスト</strong>：勤務時間が10時間以上になるテストデータを用意 → Test</li>
+      </ul>
+      操作してもなお全行 False の場合は、Condition の式（カラム名のタイプミス・全角半角の不一致など）を見直してください。
+    </div>
+
+    <h4 class="sub-heading">■ Bot のよくあるトラブル（早見表）</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:230px;">症状</th><th>確認ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">Bot が発火しない</td><td style="text-align:left;">Bot が <strong>Enabled（有効）</strong> か ／ Condition が TRUE を返す行があるか ／ Data change type が合っているか</td></tr>
+        <tr><td style="text-align:left;">メールが届かない</td><td style="text-align:left;">To 欄の式が空文字を返していないか ／ 迷惑メールフォルダ ／ 無料プランの上限</td></tr>
+        <tr><td style="text-align:left;">同じメールが何度も届く</td><td style="text-align:left;">Condition に <code>[_THISROW_BEFORE]</code> の状態遷移判定が入っているか</td></tr>
+        <tr><td style="text-align:left;">Audit history に何も出ない</td><td style="text-align:left;">Event 自体が発火していない → Data change type を確認</td></tr>
+      </tbody>
+    </table>
+
+
+    <!-- ============================================================ -->
+    <!-- 8-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec8-6">
+      <span class="sec-num">8-6</span> 動作確認とまとめ
+    </h3>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>「申請中」の休暇申請を「承認する」ボタンで承認すると、申請者に承認通知メールが届く</li>
+      <li>「差戻す」ボタンで差戻すと、差戻し通知メールが届く</li>
+      <li>同じ行の承認ステータスを何度か編集しても、<strong>状態が変わった瞬間だけ</strong> メールが送信される</li>
+      <li>Monitor → Audit history に Bot の実行ログが残っている</li>
+      <li>残業アラート Bot を「Test」で手動実行し、勤務時間10時間以上の行で総務部宛にメールが飛ぶ</li>
+      <li>作成した3つの Bot がすべて <strong>Enabled（有効）</strong> 状態になっている</li>
+    </ul>
+
+    <h4 class="sub-heading">■ この章で作成した Bot 一覧</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:170px;">Bot 名</th>
+          <th style="width:110px;">Event 種別</th>
+          <th>発火条件（Condition）</th>
+          <th style="width:110px;">Step</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>休暇_承認通知</td><td>Data Change<br>（Updates）</td><td><code>[承認ステータス] = "承認済み" AND [_THISROW_BEFORE].[承認ステータス] &lt;&gt; "承認済み"</code></td><td>Send an email<br>（申請者へ）</td></tr>
+        <tr><td>2</td><td>休暇_差戻し通知</td><td>Data Change<br>（Updates）</td><td><code>[承認ステータス] = "差戻し" AND [_THISROW_BEFORE].[承認ステータス] &lt;&gt; "差戻し"</code></td><td>Send an email<br>（申請者へ）</td></tr>
+        <tr><td>3</td><td>残業アラート_日次</td><td>Schedule<br>（毎日20:00）</td><td><code>[日付] = TODAY() AND [勤務時間] &gt;= 10</code></td><td>Send an email<br>（総務部へ）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第8章のまとめ（中級編で新しく学んだこと）</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">中級編で新しく扱ったポイント</th><th>使った仕組み</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">状態遷移の検知</td><td><code>[_THISROW_BEFORE]</code> + AND() で「変わった瞬間」だけ発火</td></tr>
+        <tr><td>2</td><td style="text-align:left;">Bot のコピーで効率量産</td><td>…メニュー → Copy で差分だけ修正</td></tr>
+        <tr><td>3</td><td style="text-align:left;">Scheduled Bot（定刻起動）</td><td>Schedule + For each row in table でテーブルを走査</td></tr>
+        <tr><td>4</td><td style="text-align:left;">複数宛先への一斉送信</td><td>SELECT() + CONCATENATE() で To 欄を動的生成</td></tr>
+        <tr><td>5</td><td style="text-align:left;">Bot の動作検証</td><td>Audit history で実行ログ確認 ／ Test（テスト実行）で即座にテスト</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      初級編で学んだ Automation の基本に、<strong>「状態遷移の検知」「定刻起動」「Bot のコピー」「複数宛先送信」</strong> という中級編のテクニックを組み合わせて、<strong>業務通知を自動化する実用的な Bot 群</strong> を作りました。次の第9章では、<strong>つまずきやすいエラーの対処法</strong> と <strong>上級編への架け橋</strong> を扱い、中級編を締めくくります。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter07.html">← 第7章：Action でボタン操作を作ろう</a>
+      <a href="chapter09.html">第9章：トラブルシューティングと次のステップ →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

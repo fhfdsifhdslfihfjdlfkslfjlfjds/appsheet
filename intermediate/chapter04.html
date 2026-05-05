@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第4章：Slice でデータを絞り込もう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #ffcc80; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #fce4b8; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #e65100; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fff3e0; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c0392b; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 概念フロー図（横並び固定） */
+  .concept-flow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 28px 0 32px; padding: 28px 16px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.table  { background: linear-gradient(135deg, #1a56a0, #3a9bd5); }
+  .cf-icon.filter { background: linear-gradient(135deg, #e65100, #fb8c00); }
+  .cf-icon.slice  { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-icon.view   { background: linear-gradient(135deg, #8e44ad, #a569bd); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding: 0 6px; }
+  .cf-arrow .arrow-text { font-size: 10px; color: #e65100; font-weight: 700; margin-top: 5px; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #e65100; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+
+  /* Before / After 比較ボックス */
+  .compare-box { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .compare-card { border-radius: 10px; padding: 18px; text-align: center; }
+  .compare-card.before { background: #fce4ec; border: 1px solid #e57373; }
+  .compare-card.after { background: #e8f5e9; border: 1px solid #81c784; }
+  .compare-card .compare-label { font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+  .compare-card.before .compare-label { color: #c62828; }
+  .compare-card.after .compare-label { color: #2e7d32; }
+  .compare-card p { font-size: 13px; color: #555; line-height: 1.6; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  /* Slice 設定一覧表 */
+  .formula-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .formula-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; }
+  .formula-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; }
+  .formula-table td:first-child { text-align: center; font-weight: 600; }
+  .formula-table td code { white-space: nowrap; }
+  .formula-table tbody tr:hover { background: #fef8f0; }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第4章：Slice でデータを絞り込もう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">4</div>
+      <h2>Slice でデータを絞り込もう</h2>
+      <div class="chapter-sub">データ絞り込み編 ─ 条件付きビューで「見たいデータだけ」を表示する</div>
+    </div>
+
+    <!-- ★変更：進捗バー 8→9ステップ -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">全体像</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">データ設計</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">入力制御</div></div>
+        <div class="progress-step active"><div class="dot">4</div><div class="label">Slice</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">関数</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Action</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec4-1">
+          <span class="toc-num">4-1</span>
+          <span class="toc-text"><strong>Slice とは？ ─ テーブルの「フィルタ付きコピー」</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-2">
+          <span class="toc-num">4-2</span>
+          <span class="toc-text"><strong>「今日の勤怠」Slice を作成する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-3">
+          <span class="toc-num">4-3</span>
+          <span class="toc-text"><strong>「申請中の休暇」Slice を作成する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-4">
+          <span class="toc-num">4-4</span>
+          <span class="toc-text"><strong>Slice 用のビューを作成する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-5">
+          <span class="toc-num">4-5</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-1 Slice とは？ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-1">
+      <span class="sec-num">4-1</span> Slice とは？ ─ テーブルの「フィルタ付きコピー」
+    </h3>
+
+    <p><strong>Slice（スライス）</strong> は、既存のテーブルに対して「Row filter condition（行のフィルタ条件）」を設定し、条件に合うデータだけを抽出した<strong>仮想的なテーブル</strong>を作る機能です。元のテーブルのデータは変更されず、あくまで「見え方」だけが変わります。</p>
+
+    <h4 class="sub-heading">■ Slice の仕組み</h4>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon table">📊</div>
+        <div class="cf-label">元テーブル</div>
+        <div class="cf-sub">全データが<br>格納されている</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">フィルタ</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon slice">🔍</div>
+        <div class="cf-label">Slice</div>
+        <div class="cf-sub">条件に合うデータ<br>だけを抽出</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">表示</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon view">📱</div>
+        <div class="cf-label">ビュー</div>
+        <div class="cf-sub">絞り込まれた<br>データを表示</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ この章で作成する Slice</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:200px;">Slice 名</th><th style="width:140px;">元テーブル</th><th>抽出条件</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">今日の勤怠</td><td>勤怠記録</td><td>日付 = 今日 のレコードだけ表示</td></tr>
+        <tr><td>2</td><td style="text-align:left;">申請中の休暇</td><td>休暇申請</td><td>承認ステータス = 「申請中」のレコードだけ表示</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Slice はデータのコピーではない</div>
+      Slice はフィルタ条件を通した「窓」のようなものです。Slice 上でデータを編集すると、元テーブルのデータも更新されます。別のデータが作られるわけではないので、ストレージの心配はありません。
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ Slice を使うメリット</div>
+      <strong>ビューのフィルタとの違い：</strong>ビューにも Filter 機能がありますが、Slice を使うと「フィルタ条件を再利用」できます。同じ Slice を複数のビューで使ったり、Action や Automation の対象として指定したりできるため、アプリ全体の設計がシンプルになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-2 「今日の勤怠」Slice を作成する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-2">
+      <span class="sec-num">4-2</span> 「今日の勤怠」Slice を作成する
+    </h3>
+
+    <p>勤怠記録テーブルから「今日の日付のレコードだけ」を表示する Slice を作成します。出退勤管理のホーム画面として使うことを想定しています。</p>
+
+    <h4 class="sub-heading">■ Slice の作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data</strong> アイコンをクリックし、左パネルにテーブル一覧を表示します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>左パネルの <strong>「勤怠記録」テーブル名の横にある「＋」ボタン</strong> をクリックします。</p>
+          <p>※ パネル上部の検索アイコン（🔍）の隣にある「＋」でも同様です。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>候補リストが表示されます。目的に合う候補があればそれを選択するか、<strong>「Create a new slice」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>Slice の設定画面が開いたら、以下の項目を設定します。</p>
+          <table class="data-table" style="margin-top:8px;">
+            <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+            <tbody>
+              <tr><td>Slice Name</td><td><strong>今日の勤怠</strong></td></tr>
+              <tr><td>Source Table</td><td><strong>勤怠記録</strong>（自動で入っている場合はそのまま）</td></tr>
+              <tr><td>Row filter condition</td><td><code>[日付] = TODAY()</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch04-02-01.png" alt="Data パネルの＋ボタンからSliceを作成" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図4-2-1：Data パネルの「＋」ボタンから Slice を作成</figcaption>
+    </figure>
+
+    <figure class="figure">
+      <img src="images/ch04-02-02.png" alt="今日の勤怠 Slice の設定画面" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図4-2-2：「今日の勤怠」Slice の Row filter condition を設定</figcaption>
+    </figure>
+
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Row filter condition の書き方</div>
+      <code>[日付] = TODAY()</code> は「日付カラムの値が今日と等しい行だけを表示する」という意味です。<code>TODAY()</code> は毎日自動的に当日の日付を返すため、日付を手動で変更する必要はありません。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ サンプルデータの日付</div>
+      サンプルデータの日付が過去の日付になっている場合、この Slice には何も表示されません。テスト時はスプレッドシート上で数行のデータの日付を <strong>今日の日付</strong> に変更してから動作確認してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-3 「申請中の休暇」Slice を作成する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-3">
+      <span class="sec-num">4-3</span> 「申請中の休暇」Slice を作成する
+    </h3>
+
+    <p>休暇申請テーブルから「承認ステータスが『申請中』のレコードだけ」を表示する Slice を作成します。管理者が未承認の申請を一覧で確認する用途を想定しています。</p>
+
+    <h4 class="sub-heading">■ Slice の作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左パネルの <strong>「休暇申請」テーブル名の横にある「＋」ボタン</strong> をクリックし、<strong>「Create a new slice」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>以下の項目を設定します。</p>
+          <table class="data-table" style="margin-top:8px;">
+            <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+            <tbody>
+              <tr><td>Slice Name</td><td><strong>申請中の休暇</strong></td></tr>
+              <tr><td>Source Table</td><td><strong>休暇申請</strong>（自動で入っている場合はそのまま）</td></tr>
+              <tr><td>Row filter condition</td><td><code>[承認ステータス] = "申請中"</code></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch04-03-01.png" alt="申請中の休暇 Slice の設定画面" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図4-3-1：「申請中の休暇」Slice の Row filter condition を設定</figcaption>
+    </figure>
+
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 文字列の比較は完全一致</div>
+      <code>[承認ステータス] = "申請中"</code> は完全一致の比較です。第3章で Valid If を <code>LIST("申請中", "承認済み", "差戻し")</code> と設定したため、スプレッドシート上の値も正確に「申請中」と記録されています。Valid If で入力値を統一しておくことで、Slice のフィルタ条件が確実に動作します。
+    </div>
+
+    <h4 class="sub-heading">■ 応用 ─ 複数条件の Slice も可能</h4>
+
+    <p>将来的には、複数の条件を組み合わせた Slice も作成できます。参考として、よく使うフィルタ条件のパターンを紹介します。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:200px;">用途</th><th>Row filter condition</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">今月の勤怠</td><td><code>MONTH([日付]) = MONTH(TODAY())</code></td></tr>
+        <tr><td style="text-align:left;">自分の申請のみ</td><td><code>[社員ID] = USEREMAIL()</code></td></tr>
+        <tr><td style="text-align:left;">承認済みの休暇</td><td><code>[承認ステータス] = "承認済み"</code></td></tr>
+        <tr><td style="text-align:left;">今日 + 自分</td><td><code>AND([日付] = TODAY(), [社員ID] = USEREMAIL())</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ USEREMAIL() について</div>
+      <code>USEREMAIL()</code> は、現在ログインしているユーザーのメールアドレスを返す関数です。デプロイ後に複数ユーザーで使う場合、「自分のデータだけを表示する」Slice を作るときに非常に便利です。ただし、プロトタイプ（無料プラン）状態ではアプリ作成者のメールアドレスが常に返されます。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-4 Slice 用のビューを作成する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-4">
+      <span class="sec-num">4-4</span> Slice 用のビューを作成する
+    </h3>
+
+    <p>作成した Slice をアプリ画面に表示するためのビューを作成します。Slice 自体はデータのフィルタ条件にすぎないため、ビューと紐づけて初めてユーザーに見えるようになります。</p>
+
+    <h4 class="sub-heading">■ 「今日の勤怠」ビューの作成</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>App</strong> → <strong>Views</strong> を開き、<strong>「+ New View」</strong>（または「+」ボタン）をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>以下の項目を設定します。</p>
+          <table class="data-table" style="margin-top:8px;">
+            <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+            <tbody>
+              <tr><td>View name</td><td><strong>今日の勤怠</strong></td></tr>
+              <tr><td>For this data</td><td><strong>今日の勤怠</strong>（← Slice 名を選択）</td></tr>
+              <tr><td>View type</td><td><strong>table</strong></td></tr>
+              <tr><td>Position</td><td><strong>first</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ ビュー設定画面から Slice を作る方法もある</div>
+      Views の「For this data」ドロップダウンで、テーブル名の横にある <strong>「＋」</strong> をクリックすると、そのテーブルの Slice を新規作成できます。Slice の作成とビューの紐づけを1画面で完結できるので、慣れてきたらこちらの方法も便利です。
+    </div>
+
+
+    <figure class="figure">
+      <img src="images/ch04-04-01.png" alt="今日の勤怠ビューの設定画面" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図4-4-1：「今日の勤怠」ビューの設定（For this data で Slice を選択）</figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ 「For this data」の選択</div>
+      「For this data」のドロップダウンには、テーブル名と Slice 名の両方が表示されます。<strong>Slice 名（「今日の勤怠」）を選択</strong> してください。元テーブル（「勤怠記録」）を選ぶとフィルタされていない全データが表示されます。
+    </div>
+
+    <h4 class="sub-heading">■ 「申請中の休暇」ビューの作成</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>同様に <strong>Views</strong> で <strong>「+ New View」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>以下の項目を設定します。</p>
+          <table class="data-table" style="margin-top:8px;">
+            <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+            <tbody>
+              <tr><td>View name</td><td><strong>申請中の休暇</strong></td></tr>
+              <tr><td>For this data</td><td><strong>申請中の休暇</strong>（← Slice 名を選択）</td></tr>
+              <tr><td>View type</td><td><strong>deck</strong></td></tr>
+              <tr><td>Position</td><td><strong>next</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 既存ビューの Position を調整する</h4>
+
+    <p>第2章で作成した3つのビュー（勤怠記録・休暇申請・社員マスタ）と、今回作成した2つの Slice ビューの Position を設定して、ナビゲーションの構成を整えます。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:200px;">ビュー名</th><th style="width:120px;">For this data</th><th style="width:100px;">Position</th><th>役割</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><strong>今日の勤怠</strong>（新規）</td><td>Slice: 今日の勤怠</td><td>first</td><td>ホーム画面（今日のデータのみ）</td></tr>
+        <tr><td style="text-align:left;">休暇申請</td><td>休暇申請</td><td>next</td><td>全休暇申請データ</td></tr>
+        <tr><td style="text-align:left;">社員マスタ</td><td>社員マスタ</td><td>next</td><td>社員一覧（管理用）</td></tr>
+        <tr><td style="text-align:left;"><strong>申請中の休暇</strong>（新規）</td><td>Slice: 申請中の休暇</td><td>next</td><td>未承認の申請一覧</td></tr>
+        <tr><td style="text-align:left;">勤怠記録</td><td>勤怠記録</td><td>next</td><td>全勤怠データ（履歴用）</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ ナビゲーションの並び順について</div>
+      PRIMARY NAVIGATION 内のビューの並び順は、<strong>Position の設定とビューの作成順序</strong> によって決まります。「first」に設定したビューが先頭に表示され、「next」のビューはその後に続きます。上記の表と完全に同じ順番にならなくても、アプリの動作には影響ありません。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-5 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-5">
+      <span class="sec-num">4-5</span> 動作確認とまとめ
+    </h3>
+
+    <p>Slice とビューの設定が完了しました。プレビュー画面で動作を確認しましょう。</p>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>ナビゲーションに「今日の勤怠」「申請中の休暇」が追加されているか</li>
+      <li>「今日の勤怠」ビューに今日の日付のレコードだけが表示されているか</li>
+      <li>「申請中の休暇」ビューに承認ステータスが「申請中」のレコードだけが表示されているか</li>
+      <li>Slice ビュー上でデータを編集すると、元テーブルのビューにも反映されるか</li>
+      <li>「勤怠記録」ビュー（全データ）には全件が表示されているか</li>
+    </ul>
+
+
+
+    <h4 class="sub-heading">■ Before / After</h4>
+
+    <div class="compare-box">
+      <div class="compare-card before">
+        <div class="compare-label">❌ Slice 設定前</div>
+        <p>全データが1つの画面に表示され、必要な情報を探すのに時間がかかる</p>
+      </div>
+      <div class="compare-card after">
+        <div class="compare-label">✅ Slice 設定後</div>
+        <p>「今日の勤怠」「申請中の休暇」など、目的に応じた画面で必要なデータだけが表示される</p>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ この章で作成した Slice 一覧</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:160px;">Slice 名</th>
+          <th style="width:120px;">元テーブル</th>
+          <th>Row filter condition</th>
+          <th style="width:140px;">用途</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>今日の勤怠</td>
+          <td>勤怠記録</td>
+          <td><code>[日付] = TODAY()</code></td>
+          <td>今日の出退勤一覧</td>
+        </tr>
+        <tr>
+          <td>申請中の休暇</td>
+          <td>休暇申請</td>
+          <td><code>[承認ステータス] = "申請中"</code></td>
+          <td>未承認の申請一覧</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第4章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">Slice の概念を理解</td><td>テーブルの「フィルタ付き仮想テーブル」</td></tr>
+        <tr><td>2</td><td style="text-align:left;">「今日の勤怠」Slice を作成</td><td>[日付] = TODAY() でフィルタ</td></tr>
+        <tr><td>3</td><td style="text-align:left;">「申請中の休暇」Slice を作成</td><td>[承認ステータス] = "申請中" でフィルタ</td></tr>
+        <tr><td>4</td><td style="text-align:left;">Slice 用のビューを作成</td><td>For this data で Slice を選択する点が重要</td></tr>
+        <tr><td>5</td><td style="text-align:left;">ビューの Position を調整</td><td>ナビゲーションの表示順を整理</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      Slice を使うことで、<strong>「見たいデータだけ」を目的別に表示する画面</strong> を作れるようになりました。元テーブルのデータを変更せずにフィルタリングできるのが Slice の大きな利点です。次の第5章では、勤務時間の自動計算やステータス判定に使う <strong>関数</strong> を学びます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter03.html">← 第3章：Valid If で入力制御しよう</a>
+      <a href="chapter05.html">第5章：関数を使いこなそう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

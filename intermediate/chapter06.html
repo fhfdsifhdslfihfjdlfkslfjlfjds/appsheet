@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第6章：Format Rules で見た目を整えよう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #ffcc80; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #fce4b8; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #e65100; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fff3e0; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c0392b; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 概念フロー図 */
+  .concept-flow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 28px 0 32px; padding: 28px 16px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.data   { background: linear-gradient(135deg, #1a56a0, #3a9bd5); }
+  .cf-icon.rule   { background: linear-gradient(135deg, #e65100, #fb8c00); }
+  .cf-icon.result { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding: 0 6px; }
+  .cf-arrow .arrow-text { font-size: 10px; color: #e65100; font-weight: 700; margin-top: 5px; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #e65100; }
+
+  /* カラースウォッチ */
+  .color-swatch {
+    display: inline-block; width: 18px; height: 18px; border-radius: 4px;
+    vertical-align: middle; margin-right: 6px; border: 1px solid #ccc;
+  }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+
+  /* 関数リファレンス表 */
+  .formula-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .formula-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; }
+  .formula-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; }
+  .formula-table td:first-child { text-align: center; font-weight: 600; }
+  .formula-table td code { white-space: nowrap; }
+  .formula-table tbody tr:hover { background: #fef8f0; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第6章：Format Rules で見た目を整えよう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">6</div>
+      <h2>Format Rules で見た目を整えよう</h2>
+      <div class="chapter-sub">書式ルール編 ─ 条件に応じた色分け・アイコン表示で一目で状況がわかるアプリにする</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <!-- ★変更：進捗バー 8→9ステップ -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">全体像</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">データ設計</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">入力制御</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Slice</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">関数</div></div>
+        <div class="progress-step active"><div class="dot">6</div><div class="label">書式</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Action</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec6-1">
+          <span class="toc-num">6-1</span>
+          <span class="toc-text"><strong>Format Rules とは？</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-2">
+          <span class="toc-num">6-2</span>
+          <span class="toc-text"><strong>承認ステータスを色分けする</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-3">
+          <span class="toc-num">6-3</span>
+          <span class="toc-text"><strong>勤務ステータスに背景色を付ける</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-4">
+          <span class="toc-num">6-4</span>
+          <span class="toc-text"><strong>残業ありの行をハイライトする</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-5">
+          <span class="toc-num">6-5</span>
+          <span class="toc-text"><strong>休暇日数が長い申請を強調する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-6">
+          <span class="toc-num">6-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-1 Format Rules とは？ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-1">
+      <span class="sec-num">6-1</span> Format Rules とは？
+    </h3>
+
+    <p>Format Rules は、条件に合致した行やセルの <strong>背景色・テキスト色・アイコン・太字</strong> を自動で変更できる機能です。データの意味を視覚的に伝えることで、ユーザーは一覧画面を一目見るだけで状況を把握できます。</p>
+
+    <h4 class="sub-heading">■ Format Rules の仕組み</h4>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon data">📊</div>
+        <div class="cf-label">データの値</div>
+        <div class="cf-sub">承認ステータス<br>勤務時間 など</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">条件判定</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon rule">🎨</div>
+        <div class="cf-label">Format Rule</div>
+        <div class="cf-sub">条件式に基づいて<br>書式を決定</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">反映</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon result">📱</div>
+        <div class="cf-label">見た目が変わる</div>
+        <div class="cf-sub">背景色・文字色<br>アイコン・太字</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ Format Rules でできること</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:200px;">設定項目</th><th>説明</th><th style="width:160px;">使用例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">背景色（Highlight color）</td><td>条件に合致する行・セルの背景を塗りつぶす</td><td>承認済 → 緑</td></tr>
+        <tr><td style="text-align:left;">テキスト色（Text color）</td><td>文字色を変更する</td><td>差戻し → 赤文字</td></tr>
+        <tr><td style="text-align:left;">アイコン（Icon）</td><td>セルの先頭にアイコンを表示する</td><td>勤務中 → 🔵</td></tr>
+        <tr><td style="text-align:left;">テキスト書式（Text format）</td><td>太字・斜体・取り消し線を適用する</td><td>残業あり → 太字</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 ポイント ─ データは変わらない</div>
+      Format Rules はデータ自体を変更しません。見た目だけを変えるため、元のデータには影響しません。複数のルールを設定した場合は、上から順に評価され、最初にマッチしたルールが適用されます。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-2 承認ステータスを色分けする -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-2">
+      <span class="sec-num">6-2</span> 承認ステータスを色分けする
+    </h3>
+
+    <p>休暇申請テーブルの「承認ステータス」カラムに対して、値ごとに背景色を変える Format Rule を作成します。申請中・承認済み・差戻しの3つの状態を色で区別できるようにしましょう。</p>
+
+    <h4 class="sub-heading">■ 設定する色の一覧</h4>
+
+    <table class="data-table">
+      <thead>
+        <tr><th style="width:140px;">ステータス値</th><th style="width:120px;">背景色</th><th style="width:100px;">テキスト色</th><th>条件式</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>申請中</td>
+          <td><span class="color-swatch" style="background:#fff9c4;"></span>黄</td>
+          <td>#333</td>
+          <td><code>[承認ステータス] = "申請中"</code></td>
+        </tr>
+        <tr>
+          <td>承認済み</td>
+          <td><span class="color-swatch" style="background:#c8e6c9;"></span>緑</td>
+          <td>#333</td>
+          <td><code>[承認ステータス] = "承認済み"</code></td>
+        </tr>
+        <tr>
+          <td>差戻し</td>
+          <td><span class="color-swatch" style="background:#ffcdd2;"></span>赤</td>
+          <td>#333</td>
+          <td><code>[承認ステータス] = "差戻し"</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 設定内容（申請中の場合）</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:240px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>Rule name</td><td><strong>ステータス_申請中</strong></td></tr>
+        <tr><td>For this data</td><td><strong>休暇申請</strong></td></tr>
+        <tr><td>If this condition is true</td><td><code>[承認ステータス] = "申請中"</code></td></tr>
+        <tr><td>Format these columns and actions</td><td><strong>承認ステータス</strong>（チェックを入れる）</td></tr>
+        <tr><td>Highlight color</td><td><span class="color-swatch" style="background:#fff9c4;"></span>黄色</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Format Rule の作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+  <div class="proc-num">1</div>
+  <div class="proc-body">
+    <p>左メニューの <strong>Views アイコン</strong>（📋）をクリックし、表示されるサブメニューから <strong>「Format rules」</strong> を選択します。</p>
+  </div>
+</div>
+
+     <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>右パネル上部の <strong>「＋」（New Format Rule）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>上記の設定内容に従って各項目を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-grid">
+      <figure class="preview-figure">
+        <img src="images/ch06-02-01a.png" alt="Format Rule 申請中の設定画面（上部）">
+        <figcaption>図6-2-1a：Rule name / For this data / If this condition is true / Format these columns の設定</figcaption>
+      </figure>
+      <figure class="preview-figure">
+        <img src="images/ch06-02-01b.png" alt="Format Rule 申請中の設定画面（Visual Format）">
+        <figcaption>図6-2-1b：Visual Format ─ Icon / Highlight color / Text color の設定</figcaption>
+      </figure>
+    </div>
+
+    <h4 class="sub-heading">■ 承認済み・差戻しも同様に作成</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>手順1〜4を繰り返し、<strong>「ステータス_承認済み」</strong> を作成します。</p>
+          <p>条件：<code>[承認ステータス] = "承認済み"</code>　背景色：<span class="color-swatch" style="background:#c8e6c9;"></span>緑</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p>同様に <strong>「ステータス_差戻し」</strong> を作成します。</p>
+          <p>条件：<code>[承認ステータス] = "差戻し"</code>　背景色：<span class="color-swatch" style="background:#ffcdd2;"></span>赤</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">7</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch06-02-02.png" alt="3つの承認ステータス Format Rule 一覧">
+      <figcaption>図6-2-2：承認ステータスの Format Rule が3つ並んだ状態</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">📌 チェック</div>
+      プレビューで休暇申請の一覧を開き、承認ステータスの値に応じて背景色が変わっていることを確認してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-3 勤務ステータスに背景色を付ける -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-3">
+      <span class="sec-num">6-3</span> 勤務ステータスに背景色を付ける
+    </h3>
+
+    <p>第5章で作成した Virtual Column「勤務ステータス」には既に絵文字（🔵🟢🔴🟡）が含まれていますが、Format Rules を使えばさらに <strong>背景色</strong> を加えて視認性を高められます。</p>
+
+    <h4 class="sub-heading">■ 設定する色の一覧</h4>
+
+    <table class="data-table">
+      <thead>
+        <tr><th style="width:160px;">勤務ステータス</th><th style="width:120px;">背景色</th><th>条件式</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>🔵 勤務中</td>
+          <td><span class="color-swatch" style="background:#bbdefb;"></span>青</td>
+          <td><code>[勤務ステータス] = "🔵 勤務中"</code></td>
+        </tr>
+        <tr>
+          <td>🟢 通常勤務</td>
+          <td><span class="color-swatch" style="background:#c8e6c9;"></span>緑</td>
+          <td><code>[勤務ステータス] = "🟢 通常勤務"</code></td>
+        </tr>
+        <tr>
+          <td>🔴 残業あり</td>
+          <td><span class="color-swatch" style="background:#ffcdd2;"></span>赤</td>
+          <td><code>[勤務ステータス] = "🔴 残業あり"</code></td>
+        </tr>
+        <tr>
+          <td>🟡 時短勤務</td>
+          <td><span class="color-swatch" style="background:#fff9c4;"></span>黄</td>
+          <td><code>[勤務ステータス] = "🟡 時短勤務"</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 設定内容（勤務中の場合）</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:240px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>Rule name</td><td><strong>勤務_勤務中</strong></td></tr>
+        <tr><td>For this data</td><td><strong>勤怠記録</strong></td></tr>
+        <tr><td>If this condition is true</td><td><code>[勤務ステータス] = "🔵 勤務中"</code></td></tr>
+        <tr><td>Format these columns and actions</td><td><strong>勤務ステータス</strong>（チェックを入れる）</td></tr>
+        <tr><td>Highlight color</td><td><span class="color-swatch" style="background:#bbdefb;"></span>青</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+       <div class="proc-num">1</div>
+       <div class="proc-body">
+        <p>左メニューの <strong>Views アイコン</strong>（📋）をクリックし、表示されるサブメニューから <strong>「Format rules」</strong> を選択します。</p>
+  </div>
+</div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>上記の設定内容に従って各項目を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>同様に残りの3つ（<strong>通常勤務</strong>・<strong>残業あり</strong>・<strong>時短勤務</strong>）も上の色一覧表を参考に作成します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch06-03-01.png" alt="勤務ステータスの Format Rule 設定">
+      <figcaption>図6-3-1：勤務ステータスの Format Rule 設定画面</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Virtual Column にも Format Rules は使える</div>
+      Format Rules の「Format these columns and actions」には、通常カラムだけでなく Virtual Column も表示されます。第5章で追加した「勤務ステータス」「勤務時間」なども対象に指定できます。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-4 残業ありの行をハイライトする -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-4">
+      <span class="sec-num">6-4</span> 残業ありの行をハイライトする
+    </h3>
+
+    <p>セクション6-3では「勤務ステータス」カラムだけを色分けしましたが、ここでは <strong>行全体</strong> をハイライトして、残業がある記録をさらに目立たせます。</p>
+
+    <h4 class="sub-heading">■ 設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:240px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>Rule name</td><td><strong>残業_行ハイライト</strong></td></tr>
+        <tr><td>For this data</td><td><strong>勤怠記録</strong></td></tr>
+        <tr><td>If this condition is true</td><td><code>[勤務時間] >= 9</code></td></tr>
+        <tr><td>Format these columns and actions</td><td><strong>すべてのカラムにチェック</strong>を入れる</td></tr>
+        <tr><td>Highlight color</td><td><span class="color-swatch" style="background:#ffcdd2;"></span>薄赤（#FFCDD2）</td></tr>
+        <tr><td>Text color</td><td><span class="color-swatch" style="background:#c62828;"></span>濃い赤（#C62828）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+  <div class="proc-num">1</div>
+  <div class="proc-body">
+    <p>左メニューの <strong>Views アイコン</strong>（📋）をクリックし、表示されるサブメニューから <strong>「Format rules」</strong> を選択します。</p>
+  </div>
+</div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>上記の設定内容に従って各項目を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch06-04-01.png" alt="残業行ハイライトの Format Rule 設定">
+      <figcaption>図6-4-1：残業がある行全体をハイライトする Format Rule</figcaption>
+    </figure>
+
+    <div class="warn-box">
+  <div class="warn-title">⚠️ 注意 ─ ルールの優先順位について</div>
+  AppSheet の Format Rules は<strong>上から順に処理され、競合する場合は最後（下）のルールが優先</strong>されます。ただし、ルール一覧の並び順はドラッグ等で変更できず、作成順で決まります。<br><br>
+  6-3 で設定したカラム単位のルールと 6-4 の行全体のルールが競合する場合は、<strong>条件式を工夫して競合を回避する方法</strong>をおすすめします。例えば 6-3 の各ルールの条件に <code>AND(元の条件, [勤務時間] < 9)</code> を追加すれば、勤務時間9時間以上のときはカラム単位ルールがマッチしなくなり、行ハイライトだけが適用されます。
+</div>
+
+    <div class="note-box">
+      <div class="note-title">💡 ポイント ─ 「すべてのカラムにチェック」で行全体を塗る</div>
+      「Format these columns and actions」で個別カラムではなく <strong>すべてのカラムにチェック</strong> を入れると、一覧画面で行全体が指定色でハイライトされます。特定の行を目立たせたいときに便利なテクニックです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-5 休暇日数が長い申請を強調する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-5">
+      <span class="sec-num">6-5</span> 休暇日数が長い申請を強調する
+    </h3>
+
+    <p>休暇申請テーブルで、<strong>休暇日数が3日以上</strong> の申請を太字＋背景色で強調し、長期休暇の申請が一目で分かるようにします。</p>
+
+    <h4 class="sub-heading">■ 設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:240px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>Rule name</td><td><strong>長期休暇_強調</strong></td></tr>
+        <tr><td>For this data</td><td><strong>休暇申請</strong></td></tr>
+        <tr><td>If this condition is true</td><td><code>[休暇日数] >= 3</code></td></tr>
+        <tr><td>Format these columns and actions</td><td><strong>休暇日数</strong>（チェックを入れる）</td></tr>
+        <tr><td>Highlight color</td><td><span class="color-swatch" style="background:#ffe0b2;"></span>オレンジ</td></tr>
+        <tr><td>Text format</td><td><strong>Bold</strong>（太字）にチェック</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+       <div class="proc-num">1</div>
+       <div class="proc-body">
+    <p>左メニューの <strong>Views アイコン</strong>（📋）をクリックし、表示されるサブメニューから <strong>「Format rules」</strong> を選択します。</p>
+  </div>
+</div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>上記の設定内容に従って各項目を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch06-05-01.png" alt="長期休暇強調の Format Rule 設定">
+      <figcaption>図6-5-1：休暇日数が3日以上の場合にオレンジ背景＋太字になる設定</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">📌 応用</div>
+      条件の数値を変えれば「5日以上は赤」「1日は灰色」など、段階的な色分けも可能です。必要に応じてルールを追加してみてください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-6">
+      <span class="sec-num">6-6</span> 動作確認とまとめ
+    </h3>
+
+    <p>すべての Format Rule の設定が完了しました。プレビュー画面で各設定が正しく動作するか確認しましょう。</p>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>休暇申請一覧：承認ステータスが黄・緑・赤で色分けされているか</li>
+      <li>勤怠記録一覧：勤務ステータスが青・緑・赤・黄で色分けされているか</li>
+      <li>勤怠記録一覧：勤務時間9時間以上の行全体が薄赤でハイライトされているか</li>
+      <li>休暇申請一覧：休暇日数3日以上のセルがオレンジ背景＋太字になっているか</li>
+      <li>承認ステータスの値を変更して、色がリアルタイムで切り替わるか</li>
+    </ul>
+
+    <h4 class="sub-heading">■ プレビューで確認</h4>
+
+     <figure class="preview-figure" style="margin: 16px 0;">
+      <img src="images/ch06-06-01.png" alt="休暇申請一覧のプレビュー">
+      <figcaption>図6-6-1：休暇申請一覧 ─ ステータスが色分けされている</figcaption>
+    </figure>
+
+    <figure class="preview-figure" style="margin: 16px 0;">
+      <img src="images/ch06-06-02.png" alt="勤怠記録一覧のプレビュー">
+      <figcaption>図6-6-2：勤怠記録一覧 ─ 残業行がハイライトされている</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ この章で作成した Format Rule 一覧</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:60px;">No.</th>
+          <th style="width:170px;">Rule name</th>
+          <th style="width:90px;">対象テーブル</th>
+          <th>条件式</th>
+          <th style="width:80px;">書式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>ステータス_申請中</td><td>休暇申請</td><td><code>[承認ステータス] = "申請中"</code></td><td><span class="color-swatch" style="background:#fff9c4;"></span>黄</td></tr>
+        <tr><td>2</td><td>ステータス_承認済み</td><td>休暇申請</td><td><code>[承認ステータス] = "承認済み"</code></td><td><span class="color-swatch" style="background:#c8e6c9;"></span>緑</td></tr>
+        <tr><td>3</td><td>ステータス_差戻し</td><td>休暇申請</td><td><code>[承認ステータス] = "差戻し"</code></td><td><span class="color-swatch" style="background:#ffcdd2;"></span>赤</td></tr>
+        <tr><td>4</td><td>勤務_勤務中</td><td>勤怠記録</td><td><code>[勤務ステータス] = "🔵 勤務中"</code></td><td><span class="color-swatch" style="background:#bbdefb;"></span>青</td></tr>
+        <tr><td>5</td><td>勤務_通常勤務</td><td>勤怠記録</td><td><code>[勤務ステータス] = "🟢 通常勤務"</code></td><td><span class="color-swatch" style="background:#c8e6c9;"></span>緑</td></tr>
+        <tr><td>6</td><td>勤務_残業あり</td><td>勤怠記録</td><td><code>[勤務ステータス] = "🔴 残業あり"</code></td><td><span class="color-swatch" style="background:#ffcdd2;"></span>赤</td></tr>
+        <tr><td>7</td><td>勤務_時短勤務</td><td>勤怠記録</td><td><code>[勤務ステータス] = "🟡 時短勤務"</code></td><td><span class="color-swatch" style="background:#fff9c4;"></span>黄</td></tr>
+        <tr><td>8</td><td>残業_行ハイライト</td><td>勤怠記録</td><td><code>[勤務時間] >= 9</code></td><td><span class="color-swatch" style="background:#ffcdd2;"></span>行全体（#FFCDD2）</td></tr>
+        <tr><td>9</td><td>長期休暇_強調</td><td>休暇申請</td><td><code>[休暇日数] >= 3</code></td><td><span class="color-swatch" style="background:#ffe0b2;"></span>+ 太字</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第6章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:280px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">Format Rules の基本を理解</td><td>条件に応じて色・アイコン・書式を自動で変更する機能</td></tr>
+        <tr><td>2</td><td style="text-align:left;">承認ステータスの色分け</td><td>値ごとに3つのルールを作成（黄・緑・赤）</td></tr>
+        <tr><td>3</td><td style="text-align:left;">勤務ステータスの背景色</td><td>Virtual Column にも Format Rules を適用できる</td></tr>
+        <tr><td>4</td><td style="text-align:left;">残業行の行全体ハイライト</td><td>全カラムにチェックを入れると行全体が塗られる</td></tr>
+        <tr><td>5</td><td style="text-align:left;">長期休暇の強調</td><td>数値条件 + Bold で重要データを目立たせる</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      Format Rules を使って、データの状態に応じた<strong>視覚的フィードバック</strong>をアプリに追加しました。色やアイコンで情報を伝えることで、ユーザーが一覧画面を見ただけで状況を把握できるようになります。次の第7章では、<strong>Action</strong> を使ってボタンひとつで「承認」「差戻し」などの操作を実行できる仕組みを作ります。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter05.html">← 第5章：関数を使いこなそう</a>
+      <a href="chapter07.html">第7章：Action でボタン操作を作ろう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

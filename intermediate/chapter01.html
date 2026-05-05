@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第1章：アプリの全体像を知ろう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px;
+    line-height: 1.85;
+    color: #333;
+    background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08);
+    min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header {
+    background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%);
+    color: #fff;
+    padding: 28px 40px 24px;
+  }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80;
+    border-radius: 10px;
+    padding: 32px 36px;
+    margin-bottom: 40px;
+    text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px;
+    background: #e65100; color: #fff; border-radius: 50%;
+    font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 練習用ファイル */
+  .files-section { margin-bottom: 40px; }
+  .files-section h3 {
+    font-size: 17px; color: #e65100; font-weight: 700;
+    margin-bottom: 14px; padding-bottom: 8px; border-bottom: 2px solid #e65100;
+  }
+  .file-list { list-style: none; }
+  .file-list li {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 12px 0; border-bottom: 1px solid #eaeef4;
+  }
+  .file-list li:last-child { border-bottom: none; }
+  .file-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .file-info { flex: 1; }
+  .file-info .file-name { font-weight: 700; font-size: 14px; }
+  .file-info .file-name a { color: #e65100; text-decoration: none; }
+  .file-info .file-name a:hover { text-decoration: underline; }
+  .file-info .file-desc { font-size: 13px; color: #777; margin-top: 2px; }
+
+  /* 章内目次 */
+  .toc-box {
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 28px 32px; margin-bottom: 44px; background: #fff;
+  }
+  .toc-box-title {
+    text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px;
+  }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ブロック */
+  .step-block {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px;
+    padding: 20px 24px; margin: 16px 0 20px;
+  }
+  .step-block p { margin-bottom: 8px; }
+  .step-label { font-weight: 700; color: #e65100; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 20px; font-size: 14px; }
+  .data-table th {
+    background: #e65100; color: #fff; font-weight: 700; padding: 10px 14px;
+    text-align: center; font-size: 13px;
+  }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tr:nth-child(even) td { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* 比較カラム */
+  .compare-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+  .compare-col { padding: 16px; border-radius: 8px; }
+  .compare-col.beginner { background: #e8f5e9; border: 1px solid #a5d6a7; }
+  .compare-col.intermediate { background: #fff3e0; border: 1px solid #ffcc80; }
+  .compare-col h4 { font-size: 14px; margin-bottom: 10px; text-align: center; }
+  .compare-col.beginner h4 { color: #2e7d32; }
+  .compare-col.intermediate h4 { color: #e65100; }
+  .compare-col ul { list-style: none; font-size: 13px; }
+  .compare-col ul li { padding: 4px 0 4px 20px; position: relative; }
+  .compare-col ul li::before { content: '•'; position: absolute; left: 4px; color: #888; font-weight: 700; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    border: 1px solid #d4dce8;
+  }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img {
+    width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px;
+  }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 概念フロー図（横並び固定） */
+  .concept-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 28px 0 32px;
+    padding: 28px 16px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80;
+    border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 56px; height: 56px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.data    { background: linear-gradient(135deg, #43a047, #66bb6a); }
+  .cf-icon.setting { background: linear-gradient(135deg, #e65100, #fb8c00); }
+  .cf-icon.app     { background: linear-gradient(135deg, #1a56a0, #3a9bd5); }
+  .cf-icon.check   { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
+  .cf-icon.result  { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow {
+    display: flex; flex-direction: column; align-items: center;
+    flex-shrink: 0; padding: 0 6px;
+  }
+  .cf-arrow .arrow-text { font-size: 10px; color: #e65100; font-weight: 700; margin-top: 5px; }
+
+  /* フローチャート */
+  .flow-wrapper {
+    margin: 28px 0 32px; padding: 28px 24px;
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .flow-row-top {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: center; gap: 0; margin-bottom: 0;
+  }
+  .flow-row-mid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    align-items: center; gap: 0; margin-top: 16px;
+  }
+  .flow-card {
+    background: linear-gradient(135deg, #e65100, #fb8c00);
+    color: #fff; border-radius: 10px; padding: 16px 10px; text-align: center;
+    box-shadow: 0 3px 10px rgba(230,81,0,.18);
+    min-height: 100px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .flow-card .flow-num { font-size: 13px; font-weight: 700; opacity: .85; letter-spacing: .08em; margin-bottom: 6px; }
+  .flow-card .flow-label { font-size: 14px; font-weight: 700; line-height: 1.45; margin-bottom: 4px; }
+  .flow-card .flow-chapter { font-size: 11px; opacity: .75; }
+  .flow-card.goal { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .flow-arrow-h { display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+  .flow-arrow-h .arrow-body {
+    width: 28px; height: 3px; background: #ffcc80; position: relative;
+  }
+  .flow-arrow-h .arrow-body::after {
+    content: ''; position: absolute; right: -2px; top: -5px;
+    border: 6px solid transparent; border-left: 8px solid #ffcc80;
+  }
+  .flow-connector-h {
+    display: flex; justify-content: flex-end; padding-right: 50%;
+    margin-top: -1px;
+  }
+  .flow-connector-v { display: flex; flex-direction: column; align-items: center; }
+  .flow-connector-v .vline { width: 3px; height: 16px; background: #ffcc80; }
+  .flow-connector-v .varrow {
+    width: 0; height: 0;
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+    border-top: 9px solid #ffcc80;
+  }
+
+  /* 補足・注意・POINTボックス */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+  .page-nav a.disabled { background: #ccc; pointer-events: none; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第1章：アプリの全体像を知ろう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">1</div>
+      <h2>アプリの全体像を知ろう</h2>
+      <div class="chapter-sub">導入編 ─ 勤怠管理アプリの完成形とデータ設計を把握する</div>
+    </div>
+
+    <!-- ★変更：進捗バー 8→9ステップ -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step active"><div class="dot">1</div><div class="label">全体像</div></div>
+        <div class="progress-step"><div class="dot">2</div><div class="label">データ設計</div></div>
+        <div class="progress-step"><div class="dot">3</div><div class="label">入力制御</div></div>
+        <div class="progress-step"><div class="dot">4</div><div class="label">Slice</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">関数</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Action</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 練習用ファイル -->
+    <section class="files-section">
+      <h3>📁 練習用ファイル（ダウンロード）</h3>
+      <ul class="file-list">
+        <li>
+          <span class="file-num">1</span>
+          <div class="file-info">
+            <div class="file-name"><a href="https://docs.google.com/spreadsheets/d/1ex2OOauqwt4mVOFe0eYHIE-kGRunbax7C9u5UYtseK4/copy" target="_blank">【中級編】勤怠管理アプリ_サンプルデータ.gsheet</a></div>
+            <div class="file-desc">クリックすると Google ドライブにコピーが作成されます。そのまま中級編の教材として使用してください。</div>
+          </div>
+        </li>
+        <li>
+          <span class="file-num">2</span>
+          <div class="file-info">
+            <div class="file-name"><a href="https://www.appsheet.com/start/5a5e37ea-e083-463a-9e1a-428bbab1628d?platform=desktop#appName=%E5%8B%A4%E6%80%A0%E7%AE%A1%E7%90%86%E3%82%A2%E3%83%97%E3%83%AA_%E3%83%87%E3%83%BC%E3%82%BF-135991951&amp;vss=H4sIAAAAAAAAA6tWKstMLQ8uSUzOVrKKrkbwvFMrlayUqmOUQioLUmOUrGKUnPPzSoryc2KUdGKU_BJzIYJPdnc9m770ceO6p91LnjUsiFGqVaqN1YEZU5JarGRVTZYpVlRxi45SZkpqXklmWmZqEchIkAFAo6DagdIgzUABNK1KtTpKuaUliUk5qWBfALXW1gLF0vKTS4tTU8KADiPfQcWeea4VBYl5Kb75KUCT0xJzilNrAUtcJ62IAQAA&amp;view=%E4%BB%8A%E6%97%A5%E3%81%AE%E5%8B%A4%E6%80%A0" target="_blank">【中級編】完成形アプリ（答え合わせ用）</a></div>
+            <div class="file-desc">中級編の完成版アプリです。迷ったときに参照してください。リンクをクリックするとブラウザで開きます。</div>
+          </div>
+        </li>
+      </ul>
+
+      <div class="warn-box">
+        <div class="warn-title">⚠️ スプレッドシートのコピーについて</div>
+        上記「サンプルデータ.gsheet」のリンクをクリックすると、<strong>「コピーを作成しますか？」</strong> という確認画面が表示されます。
+        「コピーを作成」をクリックすると、ご自身の Google ドライブにスプレッドシートがコピーされます。
+        <strong>コピーしたファイルを使って作業してください。</strong>元のファイルは編集できません。
+      </div>
+    </section>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec1-1">
+          <span class="toc-num">1-1</span>
+          <span class="toc-text"><strong>中級編で作るアプリと学ぶこと</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec1-2">
+          <span class="toc-num">1-2</span>
+          <span class="toc-text"><strong>初級編との違い ─ ステップアップのポイント</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec1-3">
+          <span class="toc-num">1-3</span>
+          <span class="toc-text"><strong>完成アプリのイメージ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec1-4">
+          <span class="toc-num">1-4</span>
+          <span class="toc-text"><strong>データ構成（テーブル設計）の全体像</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec1-5">
+          <span class="toc-num">1-5</span>
+          <span class="toc-text"><strong>全体の作成フロー ─ 8ステップで完成！</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ==========================================
+         1-1  中級編で作るアプリと学ぶこと
+         ========================================== -->
+    <h3 class="section-heading" id="sec1-1">
+      <span class="sec-num">1-1</span> 中級編で作るアプリと学ぶこと
+    </h3>
+
+    <p>
+      中級編では、<strong>「勤怠管理アプリ」</strong> を1本完成させます。
+      社員が出勤・退勤をスマートフォンから打刻し、勤務時間を自動計算。休暇申請もアプリ内で完結させる実用的なアプリです。
+    </p>
+
+    <p>
+      初級編で学んだ基本操作（Data / Views / Actions / Automation）をベースに、<strong>Valid If による入力制御</strong>、<strong>Slice によるデータ絞り込み</strong>、<strong>実用関数</strong>、<strong>Format Rules による条件付き書式</strong>、<strong>Action によるボタン操作</strong> など、一歩進んだテクニックを身につけます。
+    </p>
+
+    <div class="step-block">
+      <p><span class="step-label">アプリ名：</span>勤怠管理アプリ</p>
+      <p><span class="step-label">目的：</span>社員の出退勤記録・勤務時間の自動計算・休暇申請の管理</p>
+      <p><span class="step-label">使用場面：</span>社員がスマホから出退勤を打刻し、管理者が勤務状況を一覧確認する</p>
+      <p><span class="step-label">データソース：</span>Google スプレッドシート（3シート構成）</p>
+      <p><span class="step-label">前提条件：</span>初級編（備品管理アプリ）を修了していること</p>
+    </div>
+
+    <h4 class="sub-heading">■ 中級編で学ぶ主なテーマ</h4>
+
+    <!-- ★変更：テーマ一覧テーブル 第7章=Action、第8章=Automation、第9章=トラブルシューティング -->
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:50px;">章</th><th style="width:200px;">テーマ</th><th>学べること</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>第2章</td><td>データ設計</td><td>3テーブル構成・マスタテーブルの活用・Ref / Enum の実践</td></tr>
+        <tr><td>第3章</td><td>Valid If（入力制御）</td><td>入力値の制限・ドロップダウンの動的フィルタリング</td></tr>
+        <tr><td>第4章</td><td>Slice（絞り込み）</td><td>条件式でデータを絞り込み・ユーザー別ビューの作成</td></tr>
+        <tr><td>第5章</td><td>実用関数</td><td>IF / IFS / HOUR / TEXT / CONCATENATE で勤務時間を自動計算</td></tr>
+        <tr><td>第6章</td><td>Format Rules</td><td>条件付き書式・ステータス別の色分け・アイコン表示</td></tr>
+        <tr><td>第7章</td><td>Action</td><td>退勤打刻ボタン・承認／差戻しアクション・表示条件</td></tr>
+        <tr><td>第8章</td><td>Automation 応用</td><td>複数条件Bot・休暇申請の承認通知・Scheduled Bot</td></tr>
+        <tr><td>第9章</td><td>トラブルシューティング</td><td>よくあるエラーと対処法・上級編への架け橋</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 初級編の知識が前提です</div>
+      中級編では、初級編で解説した「Data / Views / Actions / Automation / デプロイ」の基本操作は省略します。
+      もしこれらの操作に不安がある場合は、<a href="../beginner/chapter01.html" style="color:#e65100;">初級編</a>を先に完了してから中級編に進んでください。
+    </div>
+
+
+    <!-- ==========================================
+         1-2  初級編との違い
+         ========================================== -->
+    <h3 class="section-heading" id="sec1-2">
+      <span class="sec-num">1-2</span> 初級編との違い ─ ステップアップのポイント
+    </h3>
+
+    <p>
+      初級編と中級編の違いを把握しておくと、学習のポイントがつかみやすくなります。
+    </p>
+
+    <div class="compare-row">
+      <div class="compare-col beginner">
+        <h4>🌱 初級編（備品管理アプリ）</h4>
+        <ul>
+          <li>テーブル：2つ（備品一覧・貸出履歴）</li>
+          <li>リレーション：単純なRef（1対多）</li>
+          <li>入力制御：なし</li>
+          <li>データ絞り込み：なし</li>
+          <li>関数：TODAY() / UNIQUEID() 程度</li>
+          <li>見た目：テーマカラー変更のみ</li>
+          <li>Automation：メール通知1つ</li>
+        </ul>
+      </div>
+      <div class="compare-col intermediate">
+        <h4>🚀 中級編（勤怠管理アプリ）</h4>
+        <ul>
+          <li>テーブル：3つ（社員マスタ・勤怠記録・休暇申請）</li>
+          <li>リレーション：複数Ref＋マスタ参照</li>
+          <li>入力制御：Valid If で動的フィルタ</li>
+          <li>データ絞り込み：Slice でユーザー別表示</li>
+          <li>関数：IF / IFS / HOUR / TEXT / CONCATENATE 等</li>
+          <li>見た目：Format Rules で条件付き書式</li>
+          <li>Action：退勤打刻・承認・差戻しボタン</li>
+          <li>Automation：複数条件Bot・承認通知</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足</div>
+      中級編で新しく学ぶ機能（Valid If / Slice / Format Rules / Action など）は、すべて初級編で使った AppSheet エディタの同じ画面内で設定できます。新しいツールを覚えるのではなく、<strong>同じツールの「より深い使い方」を学ぶ</strong>イメージです。
+    </div>
+
+
+    <!-- ==========================================
+         1-3  完成アプリのイメージ
+         ========================================== -->
+    <h3 class="section-heading" id="sec1-3">
+      <span class="sec-num">1-3</span> 完成アプリのイメージ
+    </h3>
+
+    <p>
+      中級編で完成する勤怠管理アプリの画面イメージです。ゴールが見えていると、各章の作業が理解しやすくなります。
+    </p>
+
+    <h4 class="sub-heading">■ 完成画面イメージ（4画面）</h4>
+
+    <!-- 詳細画面2つ：2列グリッド -->
+    <div class="preview-grid">
+      <figure class="preview-figure">
+        <img src="images/ch01-03-01.png" alt="勤怠打刻画面">
+        <figcaption>図1-3-1：勤怠打刻画面。出勤・退勤をワンタップで記録。</figcaption>
+      </figure>
+      <figure class="preview-figure">
+        <img src="images/ch01-03-03.png" alt="休暇申請フォーム">
+        <figcaption>図1-3-3：休暇申請詳細画面。承認・差戻しボタンで1タップ処理。</figcaption>
+      </figure>
+    </div>
+
+    <!-- 一覧画面：1列フル幅で大きく表示 -->
+    <figure class="preview-figure" style="margin: 16px 0;">
+      <img src="images/ch01-03-02.png" alt="勤怠一覧画面">
+      <figcaption>図1-3-2：勤怠一覧画面。日付・出退勤・勤務時間・勤務ステータスを一覧表示。</figcaption>
+    </figure>
+
+    <figure class="preview-figure" style="margin: 16px 0;">
+      <img src="images/ch01-03-04.png" alt="休暇申請一覧画面">
+      <figcaption>図1-3-4：休暇申請一覧。承認ステータスを色分けで表示。</figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意</div>
+      上記は完成時のイメージです。AppSheet のバージョンアップにより、画面デザインが若干異なる場合がありますが、操作手順に影響はありません。
+    </div>
+
+
+    <!-- ==========================================
+         1-4  データ構成（テーブル設計）の全体像
+         ========================================== -->
+    <h3 class="section-heading" id="sec1-4">
+      <span class="sec-num">1-4</span> データ構成（テーブル設計）の全体像
+    </h3>
+
+    <p>
+      勤怠管理アプリでは <strong>3つのテーブル（シート）</strong> を使用します。
+      初級編では2テーブルでしたが、中級編ではマスタテーブル（社員マスタ）を加えた3テーブル構成にステップアップします。
+    </p>
+
+    <!-- テーブル関連図 -->
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon data">👤</div>
+        <div class="cf-label">社員マスタ</div>
+        <div class="cf-sub">社員の基本情報<br>（マスタテーブル）</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="8" y1="10" x2="52" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="52,4 60,10 52,16" fill="#e65100"/>
+          <polygon points="8,4 0,10 8,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">Ref参照</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon setting">🕐</div>
+        <div class="cf-label">勤怠記録</div>
+        <div class="cf-sub">日々の出退勤<br>データ</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="60" height="20" viewBox="0 0 60 20">
+          <line x1="8" y1="10" x2="52" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="52,4 60,10 52,16" fill="#e65100"/>
+          <polygon points="8,4 0,10 8,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">同一社員</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon app">📝</div>
+        <div class="cf-label">休暇申請</div>
+        <div class="cf-sub">有給・休暇の<br>申請データ</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ テーブル① ：社員マスタ</h4>
+    <p>社員の基本情報を管理する <strong>マスタテーブル</strong> です。勤怠記録・休暇申請からRefで参照されます。</p>
+    <table class="data-table">
+      <thead><tr><th>社員ID</th><th>氏名</th><th>部署</th><th>メールアドレス</th><th>入社日</th></tr></thead>
+      <tbody>
+        <tr><td>E001</td><td>田中太郎</td><td>営業部</td><td>tanaka@example.com</td><td>2022/04/01</td></tr>
+        <tr><td>E002</td><td>佐藤花子</td><td>総務部</td><td>sato@example.com</td><td>2023/04/01</td></tr>
+        <tr><td>E003</td><td>鈴木一郎</td><td>開発部</td><td>suzuki@example.com</td><td>2021/10/01</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ テーブル② ：勤怠記録</h4>
+    <p>日々の出勤・退勤データを記録するテーブルです。勤務時間は <strong>Virtual Column で自動計算</strong> します。</p>
+    <!-- ★変更：テストデータを新データに合わせる -->
+    <table class="data-table">
+      <thead><tr><th>記録ID</th><th>社員ID</th><th>日付</th><th>出勤時刻</th><th>退勤時刻</th><th>勤務時間</th><th>メモ</th></tr></thead>
+      <tbody>
+        <tr><td>A001</td><td>E001</td><td>2026/04/01</td><td>09:00</td><td>18:00</td><td style="color:#e65100;font-weight:700;">9.0h</td><td></td></tr>
+        <tr><td>A002</td><td>E002</td><td>2026/04/01</td><td>08:30</td><td>15:30</td><td style="color:#e65100;font-weight:700;">7.0h</td><td>時短勤務</td></tr>
+        <tr><td>A003</td><td>E003</td><td>2026/04/02</td><td>09:00</td><td style="color:#aaa;">─</td><td style="color:#aaa;">─</td><td>勤務中</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ テーブル③ ：休暇申請</h4>
+    <p>有給・休暇の申請データを管理するテーブルです。承認ステータスを <strong>Enum型</strong> で管理し、<strong>Format Rules</strong> で色分け表示します。</p>
+    <table class="data-table">
+      <thead><tr><th>申請ID</th><th>社員ID</th><th>申請日</th><th>休暇種別</th><th>開始日</th><th>終了日</th><th>理由</th><th>承認ステータス</th></tr></thead>
+      <tbody>
+        <tr><td>V001</td><td>E001</td><td>2026/03/25</td><td>有給休暇</td><td>2026/04/10</td><td>2026/04/10</td><td>私用</td><td style="color:#27ae60;font-weight:700;">承認済み</td></tr>
+        <tr><td>V002</td><td>E003</td><td>2026/03/28</td><td>有給休暇</td><td>2026/04/15</td><td>2026/04/16</td><td>旅行</td><td style="color:#e65100;font-weight:700;">申請中</td></tr>
+        <tr><td>V003</td><td>E002</td><td>2026/04/01</td><td>慶弔休暇</td><td>2026/04/05</td><td>2026/04/07</td><td>法事</td><td style="color:#e65100;font-weight:700;">申請中</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ マスタテーブルとは？</div>
+      <strong>社員マスタ</strong> のように、基本情報を一元管理し、他のテーブルから参照されるテーブルを「マスタテーブル」と呼びます。
+      初級編の「備品一覧」も実質的にマスタの役割でしたが、中級編では「社員」という共通のマスタを <strong>勤怠記録と休暇申請の両方から参照</strong> する構造になります。これが「複数Ref」の実践です。
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 勤務時間の自動計算</div>
+      勤怠記録テーブルの「勤務時間」は、スプレッドシートに手入力するのではなく、AppSheet の <strong>Virtual Column（仮想列）と関数</strong> で自動計算します。
+      出勤時刻と退勤時刻から勤務時間を算出する式は、第5章で詳しく解説します。
+    </div>
+
+
+    <!-- ==========================================
+         1-5  全体の作成フロー ─ 8ステップで完成！
+         ========================================== -->
+    <h3 class="section-heading" id="sec1-5">
+      <span class="sec-num">1-5</span> 全体の作成フロー ─ 8ステップで完成！
+    </h3>
+
+    <p>
+      勤怠管理アプリは、以下の <strong>8つのステップ</strong> で完成します。
+      各ステップがこのマニュアルの第2章～第9章に対応しています。
+    </p>
+
+    <!-- ★変更：フロー図を8ステップに拡張（上段4＋下段4） -->
+    <div class="flow-wrapper">
+      <div class="flow-row-top">
+        <div class="flow-card">
+          <span class="flow-num">STEP 1</span>
+          <span class="flow-label">データを<br>設計する</span>
+          <span class="flow-chapter">第2章</span>
+        </div>
+        <div class="flow-arrow-h"><div class="arrow-body"></div></div>
+        <div class="flow-card">
+          <span class="flow-num">STEP 2</span>
+          <span class="flow-label">入力制御を<br>設定する</span>
+          <span class="flow-chapter">第3章</span>
+        </div>
+        <div class="flow-arrow-h"><div class="arrow-body"></div></div>
+        <div class="flow-card">
+          <span class="flow-num">STEP 3</span>
+          <span class="flow-label">Sliceで<br>絞り込む</span>
+          <span class="flow-chapter">第4章</span>
+        </div>
+        <div class="flow-arrow-h"><div class="arrow-body"></div></div>
+        <div class="flow-card">
+          <span class="flow-num">STEP 4</span>
+          <span class="flow-label">関数で<br>自動計算</span>
+          <span class="flow-chapter">第5章</span>
+        </div>
+      </div>
+      <!-- 上段右端から下段右端へ接続 -->
+      <div class="flow-connector-h">
+        <div class="flow-connector-v">
+          <div class="vline"></div>
+          <div class="varrow"></div>
+        </div>
+      </div>
+      <div class="flow-row-mid">
+        <div class="flow-card goal">
+          <span class="flow-num">STEP 8</span>
+          <span class="flow-label">トラブル<br>シューティング</span>
+          <span class="flow-chapter">第9章</span>
+        </div>
+        <div class="flow-arrow-h" style="transform:scaleX(-1);"><div class="arrow-body"></div></div>
+        <div class="flow-card">
+          <span class="flow-num">STEP 7</span>
+          <span class="flow-label">Automation<br>で自動化</span>
+          <span class="flow-chapter">第8章</span>
+        </div>
+        <div class="flow-arrow-h" style="transform:scaleX(-1);"><div class="arrow-body"></div></div>
+        <div class="flow-card">
+          <span class="flow-num">STEP 6</span>
+          <span class="flow-label">Actionで<br>ボタン操作</span>
+          <span class="flow-chapter">第7章</span>
+        </div>
+        <div class="flow-arrow-h" style="transform:scaleX(-1);"><div class="arrow-body"></div></div>
+        <div class="flow-card">
+          <span class="flow-num">STEP 5</span>
+          <span class="flow-label">見た目を<br>整える</span>
+          <span class="flow-chapter">第6章</span>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 各ステップの詳細</h4>
+    <!-- ★変更：8ステップに拡張 -->
+    <table class="data-table left-align">
+      <thead><tr><th style="width:80px;">STEP</th><th style="width:140px;">対応章</th><th>作業内容</th><th style="width:80px;">所要時間</th></tr></thead>
+      <tbody>
+        <tr><td>STEP 1</td><td>第2章：データ設計</td><td>3テーブル（社員マスタ・勤怠記録・休暇申請）を作成し、Ref / Enum を設定する</td><td>約40分</td></tr>
+        <tr><td>STEP 2</td><td>第3章：入力制御</td><td>Valid If で入力値の制限・ドロップダウンの動的フィルタリングを設定する</td><td>約30分</td></tr>
+        <tr><td>STEP 3</td><td>第4章：Slice</td><td>Slice を作成し、ログインユーザーの勤怠データのみ表示するビューを構築する</td><td>約30分</td></tr>
+        <tr><td>STEP 4</td><td>第5章：関数</td><td>IF / HOUR / TEXT 等の関数で勤務時間の自動計算・表示フォーマットを設定する</td><td>約40分</td></tr>
+        <tr><td>STEP 5</td><td>第6章：Format Rules</td><td>条件付き書式でステータス別色分け・残業行ハイライト・アイコン表示を設定する</td><td>約30分</td></tr>
+        <tr><td>STEP 6</td><td>第7章：Action</td><td>退勤打刻・承認・差戻しボタンを作成し、表示条件とアイコン・色を設定する</td><td>約30分</td></tr>
+        <tr><td>STEP 7</td><td>第8章：Automation</td><td>休暇申請時の承認通知Bot・複数条件による自動処理を構築する</td><td>約40分</td></tr>
+        <tr><td>STEP 8</td><td>第9章：FAQ</td><td>よくあるトラブルの対処法を確認し、上級編への準備をする</td><td>約20分</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ マニュアルの使い方</div>
+      初級編と同じく、このマニュアルは <strong>上から順番に読み進めるだけ</strong> で実際に動くアプリが完成するように構成されています。
+      各章で「ここを操作してください」と指示がある箇所では、実際に AppSheet を開いて一緒に操作してみてください。
+      <strong>「読む」のではなく「作りながら学ぶ」</strong> のが最も効果的です。
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足：練習用ファイルについて</div>
+      本ページ上部の「練習用ファイル」セクションから、サンプルデータ入りのスプレッドシートをダウンロードできます。
+      ゼロから入力する必要はありませんので、ご安心ください。
+      また、答え合わせ用として完成済みアプリのリンクも用意しています。途中でわからなくなった場合は、完成形と見比べて確認できます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ 無料プランで完結します</div>
+      中級編のすべての機能は、AppSheet の <strong>無料プラン（プロトタイプ状態）</strong> で動作確認できます。
+      有料プランが必要な機能（デプロイ等）は各章で明記していますが、学習の完了には有料プランは不要です。
+    </div>
+
+    <p style="margin-top:20px;">
+      以上で第1章は終了です。中級編で作る勤怠管理アプリの全体像と、学習のロードマップがつかめたでしょうか。<br>
+      次の第2章では、いよいよ3テーブル構成のデータを設計し、アプリの土台を構築していきます。
+    </p>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="../index.html" class="disabled">← 前の章はありません</a>
+      <a href="chapter02.html">第2章：データを設計しよう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

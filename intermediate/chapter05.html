@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第5章：関数を使いこなそう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #ffcc80; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #fce4b8; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #e65100; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fff3e0; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c0392b; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 概念フロー図（横並び固定） */
+  .concept-flow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 28px 0 32px; padding: 28px 16px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.data    { background: linear-gradient(135deg, #1a56a0, #3a9bd5); }
+  .cf-icon.func    { background: linear-gradient(135deg, #e65100, #fb8c00); }
+  .cf-icon.result  { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-icon.virtual { background: linear-gradient(135deg, #8e44ad, #a569bd); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding: 0 6px; }
+  .cf-arrow .arrow-text { font-size: 10px; color: #e65100; font-weight: 700; margin-top: 5px; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #e65100; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+
+  /* 関数リファレンス表 */
+  .formula-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .formula-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; }
+  .formula-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; }
+  .formula-table td:first-child { text-align: center; font-weight: 600; }
+  .formula-table td code { white-space: nowrap; }
+  .formula-table tbody tr:hover { background: #fef8f0; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第5章：関数を使いこなそう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">5</div>
+      <h2>関数を使いこなそう</h2>
+      <div class="chapter-sub">関数編 ─ 勤務時間の自動計算・ステータス判定・表示テキストの整形</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <!-- ★変更：進捗バー 8→9ステップ -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">全体像</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">データ設計</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">入力制御</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Slice</div></div>
+        <div class="progress-step active"><div class="dot">5</div><div class="label">関数</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Action</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec5-1">
+          <span class="toc-num">5-1</span>
+          <span class="toc-text"><strong>Virtual Column と App formula の基本</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-2">
+          <span class="toc-num">5-2</span>
+          <span class="toc-text"><strong>勤務時間を自動計算する（HOUR / MINUTE）</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-3">
+          <span class="toc-num">5-3</span>
+          <span class="toc-text"><strong>勤務ステータスを判定する（IF / IFS）</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-4">
+          <span class="toc-num">5-4</span>
+          <span class="toc-text"><strong>休暇日数を自動計算する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-5">
+          <span class="toc-num">5-5</span>
+          <span class="toc-text"><strong>表示テキストを整形する（TEXT / CONCATENATE）</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-6">
+          <span class="toc-num">5-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-1 Virtual Column と App formula の基本 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-1">
+      <span class="sec-num">5-1</span> Virtual Column と App formula の基本
+    </h3>
+
+    <p>AppSheet の <strong>Virtual Column（仮想カラム）</strong> は、スプレッドシート上には存在しない「計算用のカラム」です。App formula（アプリ数式）を設定すると、データが表示されるたびに自動で計算結果が生成されます。</p>
+
+    <h4 class="sub-heading">■ Virtual Column の仕組み</h4>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon data">📊</div>
+        <div class="cf-label">既存データ</div>
+        <div class="cf-sub">出勤時刻・退勤時刻<br>などの生データ</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">計算</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon func">🔧</div>
+        <div class="cf-label">App formula</div>
+        <div class="cf-sub">関数で自動計算<br>（例：時間差）</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">表示</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon result">📱</div>
+        <div class="cf-label">計算結果を表示</div>
+        <div class="cf-sub">「8.5時間」など<br>アプリ上に自動表示</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ Virtual Column の追加手順（共通）</h4>
+
+    <p>この章では何度も Virtual Column を追加するため、共通の手順をここでまとめます。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data</strong> → 対象テーブルを選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>カラム一覧の右上にある <strong>「＋」（Add virtual column）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Column name</strong>（カラム名）を入力し、<strong>App formula</strong> に関数式を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>TYPE</strong> を適切な型に設定し、<strong>Done</strong> → <strong>Save</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-01-01.png" alt="Virtual Column の追加画面" style="width:100%; border-radius:8px; border:1px solid #d4dce8;">
+      <figcaption>図5-1-1：Virtual Column の追加画面（＋ボタンの位置）</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ Virtual Column と通常カラムの違い</div>
+      <strong>通常カラム：</strong>スプレッドシートに実データが保存される。ユーザーが入力可能。<br>
+      <strong>Virtual Column：</strong>スプレッドシートには保存されず、アプリ上でのみ計算・表示される。ユーザーは編集不可。<br>
+      計算結果や判定結果など「入力するのではなく自動で決まる値」には Virtual Column を使います。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-2 勤務時間を自動計算する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-2">
+      <span class="sec-num">5-2</span> 勤務時間を自動計算する（HOUR / MINUTE）
+    </h3>
+
+    <p>勤怠記録テーブルに Virtual Column「勤務時間」を追加し、出勤時刻と退勤時刻の差を自動計算します。</p>
+
+    <h4 class="sub-heading">■ 設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>テーブル</td><td><strong>勤怠記録</strong></td></tr>
+        <tr><td>Column name</td><td><strong>勤務時間</strong></td></tr>
+        <tr><td>TYPE</td><td><strong>Decimal</strong></td></tr>
+        <tr><td>App formula</td><td>（下記参照）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ App formula</h4>
+
+    <pre><code>IF(
+  ISBLANK([退勤時刻]),
+  "",
+  HOUR([退勤時刻] - [出勤時刻]) + MINUTE([退勤時刻] - [出勤時刻]) / 60
+)</code></pre>
+
+    <h4 class="sub-heading">■ 式の解説</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:240px;">パーツ</th><th>意味</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><code>ISBLANK([退勤時刻])</code></td><td>退勤時刻が空欄かどうかを判定（勤務中の場合）</td></tr>
+        <tr><td style="text-align:left;"><code>HOUR([退勤時刻] - [出勤時刻])</code></td><td>時刻の差から「時間」部分を取得</td></tr>
+        <tr><td style="text-align:left;"><code>MINUTE(...) / 60</code></td><td>「分」部分を小数に変換（例：30分 → 0.5）</td></tr>
+        <tr><td style="text-align:left;"><code>HOUR + MINUTE/60</code></td><td>合算して「8.5」のような小数時間を算出</td></tr>
+      </tbody>
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>Data</strong> → <strong>勤怠記録</strong> → カラム一覧右上の <strong>「＋」</strong> をクリックして Virtual Column を追加します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>Column name</strong> に「勤務時間」、<strong>App formula</strong> に上記の式を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>TYPE</strong> を <strong>Decimal</strong> に設定し、<strong>Done</strong> → <strong>Save</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-02-01.png" alt="勤務時間 Virtual Column の設定">
+      <figcaption>図5-2-1：「勤務時間」Virtual Column の App formula 設定</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 退勤時刻が空欄の場合</div>
+      <code>ISBLANK([退勤時刻])</code> が TRUE の場合（まだ勤務中）、式は空文字 <code>""</code> を返します。これにより、勤務中のレコードでは勤務時間が空欄で表示されます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ 日をまたぐ勤務</div>
+      この式は出勤・退勤が同じ日であることを前提にしています。深夜勤務で日をまたぐ場合はマイナス値になる可能性があります。基本的な勤怠管理では問題ありませんが、夜勤がある場合は追加の考慮が必要です。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-3 勤務ステータスを判定する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-3">
+      <span class="sec-num">5-3</span> 勤務ステータスを判定する（IF / IFS）
+    </h3>
+
+    <p>勤怠記録テーブルに Virtual Column「勤務ステータス」を追加し、退勤時刻の有無や勤務時間に応じて自動でステータスを表示します。</p>
+
+    <h4 class="sub-heading">■ 設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>テーブル</td><td><strong>勤怠記録</strong></td></tr>
+        <tr><td>Column name</td><td><strong>勤務ステータス</strong></td></tr>
+        <tr><td>TYPE</td><td><strong>Text</strong></td></tr>
+        <tr><td>App formula</td><td>（下記参照）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ App formula</h4>
+
+    <pre><code>IFS(
+  ISBLANK([退勤時刻]), "🔵 勤務中",
+  [勤務時間] >= 9,      "🔴 残業あり",
+  [勤務時間] >= 8,      "🟢 通常勤務",
+  TRUE,                 "🟡 時短勤務"
+)</code></pre>
+
+    <h4 class="sub-heading">■ 式の解説</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:260px;">条件</th><th style="width:160px;">結果</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><code>ISBLANK([退勤時刻])</code></td><td>🔵 勤務中</td><td>退勤時刻が未入力 → まだ勤務中</td></tr>
+        <tr><td style="text-align:left;"><code>[勤務時間] >= 9</code></td><td>🔴 残業あり</td><td>9時間以上 → 残業あり</td></tr>
+        <tr><td style="text-align:left;"><code>[勤務時間] >= 8</code></td><td>🟢 通常勤務</td><td>8〜9時間未満 → 通常勤務</td></tr>
+        <tr><td style="text-align:left;"><code>TRUE</code></td><td>🟡 時短勤務</td><td>上記以外（8時間未満） → 時短勤務</td></tr>
+      </tbody>
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>勤怠記録</strong> テーブルに Virtual Column <strong>「勤務ステータス」</strong> を追加します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>App formula</strong> に上記の IFS 式を入力、<strong>TYPE</strong> を <strong>Text</strong> に設定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Done</strong> → <strong>Save</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-03-01.png" alt="勤務ステータス Virtual Column の設定">
+      <figcaption>図5-3-1：「勤務ステータス」の IFS 式を設定した状態</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ IF と IFS の使い分け</div>
+      <strong>IF(条件, 真, 偽)：</strong>条件が1つだけの場合に使用。シンプルな二択判定向き。<br>
+      <strong>IFS(条件1, 結果1, 条件2, 結果2, ...)：</strong>条件が複数ある場合に使用。上から順に評価され、最初に TRUE になった条件の結果を返します。最後の <code>TRUE</code> は「どの条件にも当てはまらない場合」のデフォルト値です。
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 勤務時間を参照している</div>
+      この式では、5-2 で作成した Virtual Column「勤務時間」を <code>[勤務時間]</code> として参照しています。Virtual Column 同士を参照することも可能です。ただし、参照先の Virtual Column が先に定義されている必要があります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-4 休暇日数を自動計算する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-4">
+      <span class="sec-num">5-4</span> 休暇日数を自動計算する
+    </h3>
+
+    <p>休暇申請テーブルに Virtual Column「休暇日数」を追加し、開始日と終了日の差から申請日数を自動計算します。</p>
+
+    <h4 class="sub-heading">■ 設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>テーブル</td><td><strong>休暇申請</strong></td></tr>
+        <tr><td>Column name</td><td><strong>休暇日数</strong></td></tr>
+        <tr><td>TYPE</td><td><strong>Number</strong></td></tr>
+        <tr><td>App formula</td><td>（下記参照）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ App formula</h4>
+
+    <pre><code>HOUR([終了日] - [開始日]) / 24 + 1</code></pre>
+
+    <p><code>[終了日] - [開始日]</code> は Duration 型（期間）を返します。<code>HOUR()</code> で総時間数を取得し、24 で割ることで日数に変換します。<code>+ 1</code> は当日を含めるための補正です（4/10〜4/10 = 1日）。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>休暇申請</strong> テーブルに Virtual Column <strong>「休暇日数」</strong> を追加します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>App formula</strong> に <code>HOUR([終了日] - [開始日]) / 24 + 1</code> を入力、<strong>TYPE</strong> を <strong>Number</strong> に設定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Done</strong> → <strong>Save</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-04-01.png" alt="休暇日数 Virtual Column の設定">
+      <figcaption>図5-4-1：「休暇日数」の App formula を設定した状態</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 日付の引き算</div>
+       AppSheet では Date 型同士の引き算が可能ですが、結果は <strong>Duration 型（期間）</strong> で返されます。Number 型のカラムで使うには <code>HOUR()</code> で総時間数を取得し、24 で割って日数に変換します。<code>DAY()</code> は Date 型から「日」の部分を取り出す関数であり、Duration には使えないので注意してください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-5 表示テキストを整形する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-5">
+      <span class="sec-num">5-5</span> 表示テキストを整形する（TEXT / CONCATENATE）
+    </h3>
+
+    <p>勤怠記録テーブルに Virtual Column「勤怠サマリー」を追加し、日付・社員名・勤務時間を1行にまとめた見やすいテキストを自動生成します。</p>
+
+    <h4 class="sub-heading">■ 設定内容</h4>
+
+    <table class="data-table" style="margin-top:8px;">
+      <thead><tr><th style="width:200px;">項目</th><th>設定値</th></tr></thead>
+      <tbody>
+        <tr><td>テーブル</td><td><strong>勤怠記録</strong></td></tr>
+        <tr><td>Column name</td><td><strong>勤怠サマリー</strong></td></tr>
+        <tr><td>TYPE</td><td><strong>Text</strong></td></tr>
+        <tr><td>App formula</td><td>（下記参照）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ App formula</h4>
+
+    <pre><code>CONCATENATE(
+  TEXT([日付], "M/D"),
+  " ",
+  [社員ID].[氏名],
+  " ",
+  IF(ISBLANK([退勤時刻]), "勤務中", CONCATENATE([勤務時間], "h"))
+)</code></pre>
+
+    <p>表示結果の例：<strong>「4/1 田中太郎 8.5h」</strong> または <strong>「4/2 鈴木一郎 勤務中」</strong></p>
+
+    <h4 class="sub-heading">■ 式の解説</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:280px;">パーツ</th><th>意味</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><code>TEXT([日付], "M/D")</code></td><td>日付を「4/1」形式にフォーマット</td></tr>
+        <tr><td style="text-align:left;"><code>[社員ID].[氏名]</code></td><td>Ref で参照している社員マスタの氏名を取得</td></tr>
+        <tr><td style="text-align:left;"><code>CONCATENATE(...)</code></td><td>複数のテキストを結合して1つの文字列にする</td></tr>
+        <tr><td style="text-align:left;"><code>IF(ISBLANK(...))</code></td><td>退勤時刻が空なら「勤務中」、あれば「8.5h」を表示</td></tr>
+      </tbody>
+    </table>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>勤怠記録</strong> テーブルに Virtual Column <strong>「勤怠サマリー」</strong> を追加します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>App formula</strong> に上記の式を入力、<strong>TYPE</strong> を <strong>Text</strong> に設定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Done</strong> → <strong>Save</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-05-01.png" alt="勤怠サマリー Virtual Column の設定">
+      <figcaption>図5-5-1：「勤怠サマリー」の CONCATENATE 式を設定した状態</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ [社員ID].[氏名] という書き方</div>
+      Ref で参照しているテーブルのカラムは <code>[Refカラム名].[参照先カラム名]</code> の形式でアクセスできます。これは AppSheet の<strong>デリファレンス（Dereference）</strong>と呼ばれる仕組みで、リレーションを張ったテーブルの情報を簡単に取得できます。
+    </div>
+
+    <h4 class="sub-heading">■ この章で使った関数リファレンス</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:180px;">関数</th>
+          <th>説明</th>
+          <th style="width:240px;">使用例</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>HOUR()</code></td>
+          <td>Duration から時間部分を取得</td>
+          <td><code>HOUR([退勤時刻] - [出勤時刻])</code></td>
+        </tr>
+        <tr>
+          <td><code>MINUTE()</code></td>
+          <td>Duration から分部分を取得</td>
+          <td><code>MINUTE([退勤時刻] - [出勤時刻])</code></td>
+        </tr>
+        <tr>
+          <td><code>IF()</code></td>
+          <td>条件分岐（二択）</td>
+          <td><code>IF(ISBLANK([退勤時刻]), "", ...)</code></td>
+        </tr>
+        <tr>
+          <td><code>IFS()</code></td>
+          <td>条件分岐（複数条件）</td>
+          <td><code>IFS(条件1, 結果1, 条件2, 結果2, ...)</code></td>
+        </tr>
+        <tr>
+          <td><code>ISBLANK()</code></td>
+          <td>値が空欄かどうかを判定</td>
+          <td><code>ISBLANK([退勤時刻])</code></td>
+        </tr>
+        <tr>
+          <td><code>TEXT()</code></td>
+          <td>値を指定フォーマットの文字列に変換</td>
+          <td><code>TEXT([日付], "M/D")</code></td>
+        </tr>
+        <tr>
+          <td><code>CONCATENATE()</code></td>
+          <td>複数のテキストを結合</td>
+          <td><code>CONCATENATE("A", " ", "B")</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-6">
+      <span class="sec-num">5-6</span> 動作確認とまとめ
+    </h3>
+
+    <p>すべての Virtual Column の設定が完了しました。プレビュー画面で各設定が正しく動作するか確認しましょう。</p>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>勤怠記録：「勤務時間」に小数の時間数（例：8.5）が表示されているか</li>
+      <li>勤怠記録：退勤時刻が空のレコードで「勤務時間」が空欄になっているか</li>
+      <li>勤怠記録：「勤務ステータス」に 🔵🟢🔴🟡 のいずれかが表示されているか</li>
+      <li>勤怠記録：退勤時刻が空のレコードで「🔵 勤務中」と表示されているか</li>
+      <li>休暇申請：「休暇日数」に正しい日数（例：1日、2日）が表示されているか</li>
+      <li>勤怠記録：「勤怠サマリー」に「4/1 田中太郎 8.5h」のような文字列が表示されているか</li>
+    </ul>
+
+
+
+    <h4 class="sub-heading">■ この章で作成した Virtual Column 一覧</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:120px;">テーブル</th>
+          <th style="width:130px;">カラム名</th>
+          <th style="width:80px;">TYPE</th>
+          <th>App formula（概要）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>勤怠記録</td>
+          <td>勤務時間</td>
+          <td>Decimal</td>
+          <td><code>HOUR() + MINUTE()/60</code>（退勤時刻が空なら空欄）</td>
+        </tr>
+        <tr>
+          <td>勤怠記録</td>
+          <td>勤務ステータス</td>
+          <td>Text</td>
+          <td><code>IFS()</code> で勤務中 / 残業 / 通常 / 時短を判定</td>
+        </tr>
+        <tr>
+          <td>休暇申請</td>
+          <td>休暇日数</td>
+          <td>Number</td>
+          <td><code>[終了日] - [開始日] + 1</code></td>
+        </tr>
+        <tr>
+          <td>勤怠記録</td>
+          <td>勤怠サマリー</td>
+          <td>Text</td>
+          <td><code>CONCATENATE()</code> + <code>TEXT()</code> でテキスト整形</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第5章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:280px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">Virtual Column の基本を理解</td><td>スプレッドシートに保存されない計算用カラム</td></tr>
+        <tr><td>2</td><td style="text-align:left;">勤務時間の自動計算</td><td>HOUR() + MINUTE()/60 で小数時間を算出</td></tr>
+        <tr><td>3</td><td style="text-align:left;">勤務ステータスの自動判定</td><td>IFS() で複数条件の分岐処理</td></tr>
+        <tr><td>4</td><td>休暇日数の自動計算</td><td>HOUR() で Duration → 時間に変換し、/24 で日数を算出</td></tr>
+        <tr><td>5</td><td style="text-align:left;">表示テキストの整形</td><td>CONCATENATE() + TEXT() + デリファレンス</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      Virtual Column と App formula を組み合わせることで、<strong>ユーザーが入力しなくても自動で計算・判定される項目</strong> を作れるようになりました。HOUR/MINUTE による時間計算、IFS による複数条件判定、CONCATENATE によるテキスト整形は、業務アプリ開発で非常によく使うパターンです。次の第6章では、<strong>Format Rules</strong> を使ってステータスに応じた色付けやアイコン表示を設定します。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter04.html">← 第4章：Slice でデータを絞り込もう</a>
+      <a href="chapter06.html">第6章：Format Rules で見た目を整えよう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

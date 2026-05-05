@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 中級編 ― 第3章：Valid If で入力制御しよう</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー */
+  .site-header { background: linear-gradient(135deg, #e65100 0%, #fb8c00 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fef0e0; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #e65100; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fff3e0 0%, #fef8f0 100%);
+    border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #e65100; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #e65100; box-shadow: 0 0 0 4px rgba(230,81,0,.2); }
+  .progress-step.done .dot { background: #fb8c00; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #e65100; font-weight: 700; }
+  .progress-step.done .label { color: #fb8c00; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #ffcc80; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #e65100; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fef8f0; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #e65100; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #e65100; }
+  .toc-arrow { color: #e65100; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #e65100; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #e65100;
+  }
+  .section-heading .sec-num {
+    background: #e65100; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #fb8c00; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #fb8c00;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #fce4b8; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #e65100; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fef8f0; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fff3e0; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c0392b; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 概念フロー図（横並び固定） */
+  .concept-flow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 28px 0 32px; padding: 28px 16px;
+    background: linear-gradient(135deg, #fef8f0 0%, #fff3e0 100%);
+    border: 1px solid #ffcc80; border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.input   { background: linear-gradient(135deg, #e67e22, #f39c12); }
+  .cf-icon.validif { background: linear-gradient(135deg, #e74c3c, #ff6b6b); }
+  .cf-icon.accept  { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-icon.reject  { background: linear-gradient(135deg, #8e8e8e, #b0b0b0); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding: 0 6px; }
+  .cf-arrow .arrow-text { font-size: 10px; color: #e65100; font-weight: 700; margin-top: 5px; }
+
+  /* 共通：図（単体画像） */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  /* 共通：図（複数画像 2列グリッド） */
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fef8f0; border: 1px solid #ffcc80; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #ffcc80; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fef8f0; border: 1px solid #ffcc80; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #e65100; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #e65100; background: #fff3e0; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #e65100; margin-bottom: 6px; font-size: 15px; }
+
+  /* Before / After 比較ボックス */
+  .compare-box { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 20px 0; }
+  .compare-card { border-radius: 10px; padding: 18px; text-align: center; }
+  .compare-card.before { background: #fce4ec; border: 1px solid #e57373; }
+  .compare-card.after { background: #e8f5e9; border: 1px solid #81c784; }
+  .compare-card .compare-label { font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+  .compare-card.before .compare-label { color: #c62828; }
+  .compare-card.after .compare-label { color: #2e7d32; }
+  .compare-card p { font-size: 13px; color: #555; line-height: 1.6; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #e65100; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #bf4500; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  /* Valid If 一覧表 */
+  .formula-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .formula-table th { background: #e65100; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; }
+  .formula-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; }
+  .formula-table td:first-child { text-align: center; font-weight: 600; }
+  .formula-table td code { white-space: nowrap; }
+  .formula-table tbody tr:hover { background: #fef8f0; }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 中級編 <small>～ 実践力を身につけよう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">中級編</a>
+    <span class="sep">▸</span>
+    <strong>第3章：Valid If で入力制御しよう</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">3</div>
+      <h2>Valid If で入力制御しよう</h2>
+      <div class="chapter-sub">入力制御編 ─ ドロップダウン・入力値制限・エラーメッセージでミスを防ぐ</div>
+    </div>
+
+    <!-- ★変更：進捗バー 8→9ステップ -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">全体像</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">データ設計</div></div>
+        <div class="progress-step active"><div class="dot">3</div><div class="label">入力制御</div></div>
+        <div class="progress-step"><div class="dot">4</div><div class="label">Slice</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">関数</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Action</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">自動化</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">FAQ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec3-1">
+          <span class="toc-num">3-1</span>
+          <span class="toc-text"><strong>Valid If とは？ ─ 入力制御の基本を知ろう</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-2">
+          <span class="toc-num">3-2</span>
+          <span class="toc-text"><strong>部署カラムにドロップダウンを設定する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-3">
+          <span class="toc-num">3-3</span>
+          <span class="toc-text"><strong>休暇種別カラムに選択肢を設定する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-4">
+          <span class="toc-num">3-4</span>
+          <span class="toc-text"><strong>承認ステータスの入力を制限する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-5">
+          <span class="toc-num">3-5</span>
+          <span class="toc-text"><strong>日付の入力範囲を制限する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-6">
+          <span class="toc-num">3-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-1 Valid If とは？ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-1">
+      <span class="sec-num">3-1</span> Valid If とは？ ─ 入力制御の基本を知ろう
+    </h3>
+
+    <p>AppSheet の <strong>Valid If</strong> は、カラムに入力できる値を制限する機能です。ドロップダウンリストで選択肢を限定したり、数式で入力条件を定義したりすることで、ユーザーの入力ミスを防げます。</p>
+
+    <h4 class="sub-heading">■ Valid If でできること</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:180px;">用途</th><th>設定例</th><th>効果</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>固定の選択肢</td><td><code>"総務部", "営業部", "開発部"</code></td><td>ドロップダウンリストから選択</td></tr>
+        <tr><td>他テーブルの値を参照</td><td><code>社員マスタ[氏名]</code></td><td>社員マスタの氏名リストから選択</td></tr>
+        <tr><td>条件付き制限</td><td><code>IF(..., TRUE, FALSE)</code></td><td>条件を満たす場合だけ入力可</td></tr>
+        <tr><td>日付範囲の制限</td><td><code>[_THIS] >= TODAY()</code></td><td>過去の日付を入力できなくする</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Valid If の動作イメージ</h4>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon input">✍️</div>
+        <div class="cf-label">ユーザーが入力</div>
+        <div class="cf-sub">フォームに<br>データを入力</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#e65100" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#e65100"/>
+        </svg>
+        <span class="arrow-text">検証</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon validif">✔️</div>
+        <div class="cf-label">Valid If チェック</div>
+        <div class="cf-sub">入力値が条件を<br>満たすか判定</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">OK</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon accept">💾</div>
+        <div class="cf-label">保存成功</div>
+        <div class="cf-sub">データが<br>保存される</div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 条件を満たさない場合</div>
+      Valid If の条件を満たさない場合、フォームの「Save」ボタンを押してもエラーメッセージが表示され、データは保存されません。これにより、不正なデータがスプレッドシートに入り込むことを防げます。
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ 初級編との違い</div>
+      初級編ではカラムの TYPE（Enum など）で選択肢を設定しましたが、中級編では <strong>Valid If</strong> を使って「条件付きの入力制限」や「日付範囲の制限」を実現します。TYPE 設定と組み合わせることで、より柔軟な入力制御が可能です。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-2 部署カラムにドロップダウンを設定する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-2">
+      <span class="sec-num">3-2</span> 部署カラムにドロップダウンを設定する
+    </h3>
+
+    <p>社員マスタの「部署」カラムに Valid If を設定して、あらかじめ用意した部署名だけを選択できるようにします。手入力による表記ゆれ（例：「営業部」と「営業」が混在する）を防ぐのが目的です。</p>
+
+    <h4 class="sub-heading">■ 設定手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data</strong> をクリックし、<strong>社員マスタ</strong> テーブルを選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>「部署」カラムの行にある <strong>鉛筆マーク（✏️ Edit）</strong> をクリックして、カラム詳細設定パネルを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>パネルを下にスクロールし、<strong>「Data Validity」</strong> セクションにある <strong>「Valid If」</strong> 欄を見つけます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Valid If</strong> 欄に以下の式を入力します。</p>
+          <pre><code>LIST("総務部", "営業部", "開発部", "人事部", "経理部")</code></pre>
+          <p>※ 自社の部署名に合わせて変更してください。各値はダブルクォーテーションで囲み、カンマで区切ります。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-02-01.png" alt="部署カラムの Valid If に選択肢を入力した状態">
+      <figcaption>図3-2-1：部署カラムの Valid If に選択肢リストを入力した状態</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ 動作確認</h4>
+
+    <p>プレビュー画面で社員マスタの新規追加、または既存データの編集を開きます。「部署」フィールドがドロップダウンリストに変わり、設定した5つの部署名からしか選べなくなっていることを確認してください。</p>
+
+    <figure class="figure">
+      <img src="images/ch03-02-02.png" alt="プレビューでドロップダウンが表示されている">
+      <figcaption>図3-2-2：プレビュー画面で部署がドロップダウン選択になった</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Enum の Values との関係</div>
+      TYPE を <strong>Enum</strong> に設定している場合は、Enum の Values にも同じ値を入れることで、Valid If との二重チェックが働きます。ただし、Valid If だけで十分に制御できる場合は、TYPE は <strong>Text</strong> のままでも構いません。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-3 休暇種別カラムに選択肢を設定する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-3">
+      <span class="sec-num">3-3</span> 休暇種別カラムに選択肢を設定する
+    </h3>
+
+    <p>休暇申請テーブルの「休暇種別」カラムに Valid If を設定します。第2章で TYPE を Enum に設定済みですが、ここでは Valid If を使ってさらに入力値を厳密に管理する方法を学びます。</p>
+
+    <h4 class="sub-heading">■ 設定手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data</strong> → <strong>休暇申請</strong> テーブル → 「休暇種別」カラムの <strong>鉛筆マーク（✏️ Edit）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>Valid If</strong> 欄に以下の式を入力します。</p>
+          <pre><code>LIST("有給休暇", "半日休暇", "病気休暇", "慶弔休暇", "特別休暇")</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-03-01.png" alt="休暇種別の Valid If に選択肢を入力した状態">
+      <figcaption>図3-3-1：休暇種別カラムの Valid If 設定</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ Enum の Values と Valid If の使い分け</div>
+      <strong>Enum の Values</strong>：フォームに表示される選択肢のリスト。見た目の選択肢を決めます。<br>
+      <strong>Valid If</strong>：保存時に値を検証するルール。条件式も書けます。<br>
+      両方を設定した場合、Valid If が優先されます。中級編以降では <strong>Valid If をメインに使う</strong> ことをおすすめします。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-4 承認ステータスの入力を制限する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-4">
+      <span class="sec-num">3-4</span> 承認ステータスの入力を制限する
+    </h3>
+
+    <p>休暇申請テーブルの「承認ステータス」カラムには「申請中」「承認済み」「差戻し」の3つの値しか入らないようにします。さらに、新規申請時は必ず「申請中」になるように Initial Value と組み合わせた設定を行います。</p>
+
+    <h4 class="sub-heading">■ 設定手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>休暇申請</strong> テーブル → 「承認ステータス」カラムの <strong>鉛筆マーク（✏️ Edit）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>Valid If</strong> 欄に以下を入力します。</p>
+          <pre><code>LIST("申請中", "承認済み", "差戻し")</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Initial value</strong> 欄に以下を入力します（第2章で設定済みの場合は確認のみ）。</p>
+          <pre><code>"申請中"</code></pre>
+          <p>これにより、新規申請時に自動で「申請中」が入り、ユーザーが誤って「承認済み」を選ぶことを防ぎます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-04-01.png" alt="承認ステータスの Valid If と Initial value の設定">
+      <figcaption>図3-4-1：承認ステータスの Valid If と Initial value を設定した状態</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ Before / After</h4>
+
+    <div class="compare-box">
+      <div class="compare-card before">
+        <div class="compare-label">❌ 設定前</div>
+        <p>自由入力のため「承認」「OK」「承認ずみ」など表記がバラバラになる</p>
+      </div>
+      <div class="compare-card after">
+        <div class="compare-label">✅ 設定後</div>
+        <p>「申請中」「承認済み」「差戻し」の3つしか選べず、新規は自動で「申請中」</p>
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 注意 ─ 編集権限の制限は別途必要</div>
+      承認ステータスを「管理者だけが変更できる」ようにするには、第7章で学ぶ <strong>Editable_If</strong> の設定が必要です。この章では入力値の制限のみを設定します。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-5 日付の入力範囲を制限する -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-5">
+      <span class="sec-num">3-5</span> 日付の入力範囲を制限する
+    </h3>
+
+    <p>休暇申請テーブルの「開始日」と「終了日」に Valid If を設定して、過去の日付を指定できないようにします。また、終了日が開始日より前にならないように制限します。</p>
+
+    <h4 class="sub-heading">■ 開始日の設定</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>休暇申請</strong> テーブル → 「開始日」カラムの <strong>鉛筆マーク（✏️ Edit）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>Valid If</strong> 欄に以下の式を入力します。</p>
+          <pre><code>[_THIS] >= TODAY()</code></pre>
+          <p><code>[_THIS]</code> は「いま入力されているこのカラムの値」を意味する AppSheet の特殊な参照です。この式により、今日以降の日付しか入力できなくなります。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-05-01.png" alt="開始日の Valid If 設定">
+      <figcaption>図3-5-1：開始日の Valid If に [_THIS] >= TODAY() を設定</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ 終了日の設定</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>「終了日」カラムの <strong>鉛筆マーク（✏️ Edit）</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>Valid If</strong> 欄に以下の式を入力します。</p>
+          <pre><code>AND([_THIS] >= TODAY(), [_THIS] >= [開始日])</code></pre>
+          <p>2つの条件を <code>AND()</code> で組み合わせています。「今日以降」かつ「開始日以降」の日付だけが入力可能になります。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-05-02.png" alt="終了日の Valid If 設定">
+      <figcaption>図3-5-2：終了日の Valid If に AND 条件を設定</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ [_THIS] とは？</div>
+      <code>[_THIS]</code> は AppSheet の特殊な参照で、「現在入力中のカラムの値」を指します。Valid If の式でよく使われる基本パーツなので覚えておきましょう。
+    </div>
+
+    <h4 class="sub-heading">■ エラーメッセージをカスタマイズする（任意）</h4>
+
+    <p>Valid If の条件に違反した場合、デフォルトでは英語のエラーメッセージが表示されます。日本語のメッセージに変更するには、同じカラム詳細パネルの <strong>「Invalid value error」</strong> 欄にメッセージを入力します。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>開始日カラムの詳細パネルで <strong>「Invalid value error」</strong> 欄を見つけます（Valid If のすぐ下にあります）。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>以下のようなメッセージを入力します。</p>
+          <pre><code>過去の日付は選択できません。今日以降の日付を入力してください。</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>同様に、終了日にも以下を設定します。</p>
+          <pre><code>終了日は開始日以降の日付を選択してください。</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-05-03.png" alt="Invalid value error にカスタムメッセージを入力した状態">
+      <figcaption>図3-5-3：Invalid value error に日本語のエラーメッセージを設定</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ エラーメッセージのおすすめ例</div>
+      <strong>開始日：</strong><code>過去の日付は選択できません。今日以降の日付を入力してください。</code><br>
+      <strong>終了日：</strong><code>終了日は開始日以降の日付を選択してください。</code>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-6">
+      <span class="sec-num">3-6</span> 動作確認とまとめ
+    </h3>
+
+    <p>すべての Valid If 設定が完了しました。プレビュー画面で各設定が正しく動作するか確認しましょう。</p>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>社員マスタ：「部署」がドロップダウンで5つの選択肢のみ表示されるか</li>
+      <li>休暇申請：「休暇種別」がドロップダウンで5つの選択肢のみ表示されるか</li>
+      <li>休暇申請：「承認ステータス」が3つの選択肢のみ表示されるか</li>
+      <li>休暇申請：新規追加で「承認ステータス」が自動的に「申請中」になっているか</li>
+      <li>休暇申請：「開始日」に過去の日付を入力するとエラーになるか</li>
+      <li>休暇申請：「終了日」に「開始日」より前の日付を入力するとエラーになるか</li>
+      <li>エラーメッセージが日本語で表示されるか（設定した場合）</li>
+    </ul>
+
+    <div class="preview-grid">
+      <figure class="preview-figure">
+        <img src="images/ch03-06-01.png" alt="部署ドロップダウンの動作確認">
+        <figcaption>図3-6-1：部署のドロップダウンが正しく表示されている</figcaption>
+      </figure>
+      <figure class="preview-figure">
+        <img src="images/ch03-06-02.png" alt="日付バリデーションのエラー表示">
+        <figcaption>図3-6-2：過去の日付を選択するとエラーメッセージが表示される</figcaption>
+      </figure>
+    </div>
+
+    <h4 class="sub-heading">■ この章で設定した Valid If 一覧</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:120px;">テーブル</th>
+          <th style="width:130px;">カラム</th>
+          <th>Valid If の式</th>
+          <th style="width:180px;">効果</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>社員マスタ</td>
+          <td>部署</td>
+          <td><code>"総務部", "営業部", "開発部", "人事部", "経理部"</code></td>
+          <td>5つの部署名から選択</td>
+        </tr>
+        <tr>
+          <td>休暇申請</td>
+          <td>休暇種別</td>
+          <td><code>"有給休暇", "半日休暇", "病気休暇", "慶弔休暇", "特別休暇"</code></td>
+          <td>5つの休暇種別から選択</td>
+        </tr>
+        <tr>
+          <td>休暇申請</td>
+          <td>承認ステータス</td>
+          <td><code>"申請中", "承認済み", "差戻し"</code></td>
+          <td>3つのステータスから選択</td>
+        </tr>
+        <tr>
+          <td>休暇申請</td>
+          <td>開始日</td>
+          <td><code>[_THIS] >= TODAY()</code></td>
+          <td>今日以降のみ入力可</td>
+        </tr>
+        <tr>
+          <td>休暇申請</td>
+          <td>終了日</td>
+          <td><code>AND([_THIS] >= TODAY(), [_THIS] >= [開始日])</code></td>
+          <td>今日以降かつ開始日以降</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第3章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">部署にドロップダウン設定</td><td>固定値リストで表記ゆれを防止</td></tr>
+        <tr><td>2</td><td style="text-align:left;">休暇種別に選択肢設定</td><td>Enum と Valid If の使い分けを学習</td></tr>
+        <tr><td>3</td><td style="text-align:left;">承認ステータスの制限</td><td>Valid If + Initial Value の組み合わせ</td></tr>
+        <tr><td>4</td><td style="text-align:left;">日付の範囲制限</td><td>[_THIS]・TODAY()・AND() の活用</td></tr>
+        <tr><td>5</td><td style="text-align:left;">エラーメッセージのカスタマイズ</td><td>Invalid value error で日本語メッセージ</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      Valid If を使うことで、<strong>ユーザーの入力ミスをアプリ側で自動的に防ぐ</strong> ことができるようになりました。固定値リスト、日付の範囲制限、<code>[_THIS]</code> の使い方は、今後の AppSheet 開発でも頻繁に使う基本テクニックです。次の第4章では、テーブルのデータを条件でフィルタリングする <strong>Slice</strong> を学びます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      エディタ右上の <strong>「Save」ボタン</strong> が灰色（保存済み）になっていることを確認してください。青色の場合は未保存の変更があります。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter02.html">← 第2章：データを設計しよう</a>
+      <a href="chapter04.html">第4章：Slice でデータを絞り込もう →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 中級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>
