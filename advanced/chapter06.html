@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第6章:条件付き書式とUXの仕上げ</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー（上級編：ピンク〜赤系） */
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%);
+    border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #c62828; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828;
+  }
+  .section-heading .sec-num {
+    background: #c62828; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #ef5350; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* Format Ruleカード */
+  .rule-card {
+    background: #fff; border: 2px solid #f48fb1; border-radius: 12px;
+    padding: 22px 26px; margin: 22px 0;
+  }
+  .rule-card .rule-title {
+    font-size: 17px; font-weight: 700; color: #c62828; margin-bottom: 12px;
+    padding-bottom: 10px; border-bottom: 2px dashed #f48fb1;
+  }
+  .rule-card .rule-spec {
+    display: grid; grid-template-columns: 150px 1fr; gap: 8px 12px;
+    font-size: 13px;
+  }
+  .rule-card .rule-spec dt {
+    font-weight: 700; color: #555;
+  }
+  .rule-card .rule-spec dd code { font-size: 12px; }
+
+  /* カラーサンプル */
+  .color-sample {
+    display: inline-block; width: 16px; height: 16px;
+    border-radius: 3px; vertical-align: middle; margin-right: 6px;
+    border: 1px solid #ccc;
+  }
+
+  /* プレビュー */
+  .badge-preview {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 4px; font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* 共通：図 */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #f48fb1; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #c62828; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #8e0000; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">上級編</a>
+    <span class="sep">▸</span>
+    <strong>第6章:条件付き書式とUXの仕上げ</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">6</div>
+      <h2>条件付き書式とUXの仕上げ</h2>
+      <div class="chapter-sub">UX編 ─ 色分け・アイコン・LINKTOFORMで業務アプリを完成させる</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Security</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">高度関数</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Dashboard</div></div>
+        <div class="progress-step active"><div class="dot">6</div><div class="label">書式UX</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Slice応用</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec6-1">
+          <span class="toc-num">6-1</span>
+          <span class="toc-text"><strong>この章で作る5つのFormat Rule</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-2">
+          <span class="toc-num">6-2</span>
+          <span class="toc-text"><strong>タスクの優先度を色分け表示</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-3">
+          <span class="toc-num">6-3</span>
+          <span class="toc-text"><strong>期限ステータスでタスクをハイライト</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-4">
+          <span class="toc-num">6-4</span>
+          <span class="toc-text"><strong>プロジェクトのステータス別書式</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-5">
+          <span class="toc-num">6-5</span>
+          <span class="toc-text"><strong>テーブルアイコンとアプリの仕上げ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec6-6">
+          <span class="toc-num">6-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-1 全体像 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-1">
+      <span class="sec-num">6-1</span> この章で作る5つのFormat Rule
+    </h3>
+
+    <p>本章では、第5章までで構築したアプリに <strong>視覚的な分かりやすさ</strong> を加えていきます。中級編で学んだ Format Rules の応用編として、<strong>優先度・期限・ステータスに応じた色分け</strong> を実装し、業務アプリらしい完成度に仕上げます。</p>
+
+    <h4 class="sub-heading">■ 中級編との違い</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">レベル</th><th style="width:200px;">Format Rulesの使い方</th><th>例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>中級編</td><td style="text-align:left;">単一カラムの値で色分け</td><td style="text-align:left;">承認ステータス = "申請中" → 黄色</td></tr>
+        <tr style="background:#fce4ec;"><td><strong>上級編</strong></td><td style="text-align:left;"><strong>Virtual Columnと組み合わせた動的書式</strong></td><td style="text-align:left;">期限ステータス(VC)が "期限超過" → 赤背景<br>進捗率(VC)に応じてグラデーション</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 本章で作る5つの Format Rule</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:170px;">Rule名</th>
+          <th style="width:130px;">テーブル</th>
+          <th>役割</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">優先度_高</td><td>タスク</td><td style="text-align:left;">優先度=高のタスクを赤色でハイライト</td></tr>
+        <tr><td>2</td><td style="text-align:left;">優先度_中</td><td>タスク</td><td style="text-align:left;">優先度=中のタスクをオレンジ色で表示</td></tr>
+        <tr><td>3</td><td style="text-align:left;">期限超過_未完了</td><td>タスク</td><td style="text-align:left;">期限超過のタスクに🚨アイコン+赤背景で警告表示</td></tr>
+        <tr><td>4</td><td style="text-align:left;">プロジェクト_完了</td><td>プロジェクト</td><td style="text-align:left;">完了プロジェクトを緑で表示</td></tr>
+        <tr><td>5</td><td style="text-align:left;">プロジェクト_中止</td><td>プロジェクト</td><td style="text-align:left;">中止プロジェクトをグレーアウト</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">📌 上級編で意識する UX のポイント</div>
+      <ul>
+        <li><strong>一目で重要度がわかる</strong>:高優先度のタスクが即座に視認できる</li>
+        <li><strong>期限管理を視覚化</strong>:期限超過を見落とさない色設計</li>
+        <li><strong>状態の階層を表現</strong>:完了・進行中・中止などの状態を一貫した色で</li>
+        <li><strong>業務ユーザーの認知負荷を下げる</strong>:アイコンと色で瞬時に情報を伝達</li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-2 タスクの優先度を色分け -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-2">
+      <span class="sec-num">6-2</span> タスクの優先度を色分け表示
+    </h3>
+
+    <p>タスクテーブルの <strong>優先度</strong>(高/中/低)に応じて、行の <strong>背景色</strong> を変えます。優先度の高いタスクが一目で識別できるようにします。</p>
+
+    <h4 class="sub-heading">■ ① 優先度=高 のFormat Rule</h4>
+
+    <div class="rule-card">
+      <div class="rule-title">🔴 優先度_高</div>
+      <dl class="rule-spec">
+        <dt>Rule name</dt><dd><code>優先度_高</code></dd>
+        <dt>For this data</dt><dd>タスク</dd>
+        <dt>If this condition is true</dt><dd><code>[優先度] = "高"</code></dd>
+        <dt>Format these columns</dt><dd>優先度</dd>
+        <dt>Icon</dt><dd>🔥(fire)</dd>
+        <dt>Highlight color</dt><dd><span class="color-sample" style="background:#ef5350;"></span><code>#ef5350</code>(赤系)</dd>
+        <dt>Text color</dt><dd><span class="color-sample" style="background:#c62828;"></span><code>red</code>(赤)</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ ② 優先度=中 のFormat Rule</h4>
+
+    <div class="rule-card">
+      <div class="rule-title">🟡 優先度_中</div>
+      <dl class="rule-spec">
+        <dt>Rule name</dt><dd><code>優先度_中</code></dd>
+        <dt>For this data</dt><dd>タスク</dd>
+        <dt>If this condition is true</dt><dd><code>[優先度] = "中"</code></dd>
+        <dt>Format these columns</dt><dd>優先度</dd>
+        <dt>Icon</dt><dd>📌(thumbtack)</dd>
+        <dt>Highlight color</dt><dd><span class="color-sample" style="background:#ffb74d;"></span><code>#ffb74d</code>(オレンジ系)</dd>
+        <dt>Text color</dt><dd><span class="color-sample" style="background:#e65100;"></span><code>orange</code>(オレンジ)</dd>
+      </dl>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ Text color を白(#ffffff)にしないこと</div>
+      Format Rule の <strong>Text color を白にすると、背景色がない部分でテキストが見えなくなります</strong>。Highlight color で色を付けたカラムは問題ありませんが、Format these columns に含まれていないカラムでは背景が白のままなので、Text color が白だとテキストが消えてしまいます。<strong>Text color には赤や黒など、白以外の色を指定</strong>してください。
+    </div>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <p>中級編で扱った Format Rule の作成手順と同じです。確認のため再掲します。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>📱 Views アイコン</strong> をクリックし、サブメニューから <strong>「Format Rules」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>右パネル上部の <strong>「+」</strong>(New Format Rule)をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>上記の設定内容に従って入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリック。同様に「優先度_中」も作成します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-grid">
+      <figure class="preview-figure">
+        <img src="images/ch06-02-01.png" alt="優先度_高の設定">
+        <figcaption>図6-2-1:優先度_高 Format Ruleの設定画面</figcaption>
+      </figure>
+      <figure class="preview-figure">
+        <img src="images/ch06-02-02.png" alt="タスク一覧での表示">
+        <figcaption>図6-2-2:タスク一覧で優先度に応じた色分けが反映</figcaption>
+      </figure>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 優先度=低 にはFormat Ruleを作らない</div>
+      「優先度=低」は<strong>デフォルト状態(色なし)</strong>として残します。すべての行に色をつけてしまうと、かえって重要なものが目立たなくなります。<strong>「色がついていない=優先度低」</strong>という暗黙ルールで運用するのが、UX上のベストプラクティスです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-3 期限ステータス -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-3">
+      <span class="sec-num">6-3</span> 期限ステータスでタスクをハイライト
+    </h3>
+
+    <p>第4章で作成した <strong>期限ステータス Virtual Column</strong> を活用して、<strong>期限超過の未完了タスクを赤背景で強調</strong> します。これにより、PMが優先して対応すべきタスクを瞬時に把握できます。</p>
+
+    <h4 class="sub-heading">■ ③ 期限超過_未完了 のFormat Rule</h4>
+
+    <div class="rule-card">
+      <div class="rule-title">⏰ 期限超過_未完了</div>
+      <dl class="rule-spec">
+        <dt>Rule name</dt><dd><code>期限超過_未完了</code></dd>
+        <dt>For this data</dt><dd>タスク</dd>
+        <dt>If this condition is true</dt><dd><code>AND([残日数] < 0, [ステータス] <> "完了")</code></dd>
+        <dt>Format these columns</dt><dd>タスク名 / 期限 / 期限ステータス</dd>
+        <dt>Icon</dt><dd>🚨(siren) または ⏰(clock)</dd>
+        <dt>Highlight color</dt><dd><span class="color-sample" style="background:#c62828;"></span><code>#c62828</code>(濃い赤)</dd>
+        <dt>Text color</dt><dd><span class="color-sample" style="background:#c62828;"></span><code>red</code>(赤)</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ 条件式の解説</h4>
+
+<pre><code>AND(
+  [残日数] < 0,        ← 残日数がマイナス(期限を過ぎている)
+  [ステータス] <> "完了"  ← かつ、完了していないタスク
+)</code></pre>
+
+    <p>条件②で <strong>「完了タスクは除外」</strong> しているのがポイントです。完了済みタスクが期限を過ぎていても、それは過去の話なのでハイライト不要です。<strong>「これから対応が必要なタスクだけ」</strong> を強調するのが UX のポイントです。</p>
+
+    <div class="point-box">
+      <div class="point-title">📌 ポイント ─ Virtual Column を条件に使う</div>
+      この Format Rule は、第4章で作成した <code>[残日数]</code>(Virtual Column)を条件式に使っています。Virtual Column は自動再計算されるため、<strong>日付が変わるたびに該当行も自動で切り替わる</strong> という大きなメリットがあります。今日の時点で期限超過のタスクが、明日には増えているかもしれません。
+    </div>
+
+    <h4 class="sub-heading">■ 優先順位の関係</h4>
+
+    <p>同じタスクが <strong>優先度=高</strong> かつ <strong>期限超過</strong> の場合、どちらの書式が適用されるかは、Format Ruleの並び順で決まります。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:160px;">パターン</th><th>適用される書式</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">優先度=高 のみ</td><td style="text-align:left;">優先度_高 のルール(オレンジ寄りの赤)</td></tr>
+        <tr><td style="text-align:left;">期限超過 のみ</td><td style="text-align:left;">期限超過_未完了 のルール(濃い赤)</td></tr>
+        <tr style="background:#fce4ec;"><td style="text-align:left;"><strong>両方該当</strong></td><td style="text-align:left;"><strong>両方の書式が重ねて適用</strong>される(優先度_高でアイコン+色、期限超過_未完了で背景色+アイコン)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ Format Ruleの並び順に注意</div>
+      AppSheet では、Format Rules 画面でルールを <strong>上から順に評価</strong> します。複数のルールが同じカラムに適用される場合、<strong>下にあるルールが上書き</strong> します。タスクテーブルでは、期限超過のほうがより重要なので、<strong>期限超過_未完了を優先度ルールの下に配置</strong> しておくとよいでしょう。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-4 プロジェクトのステータス書式 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-4">
+      <span class="sec-num">6-4</span> プロジェクトのステータス別書式
+    </h3>
+
+    <p>プロジェクトテーブルにも、ステータスに応じた書式を設定します。<strong>完了</strong>と<strong>中止</strong>のプロジェクトを、進行中とは異なる見た目にして、一覧で識別しやすくします。</p>
+
+    <h4 class="sub-heading">■ ④ プロジェクト_完了 のFormat Rule</h4>
+
+    <div class="rule-card">
+      <div class="rule-title">✅ プロジェクト_完了</div>
+      <dl class="rule-spec">
+        <dt>Rule name</dt><dd><code>プロジェクト_完了</code></dd>
+        <dt>For this data</dt><dd>プロジェクト</dd>
+        <dt>If this condition is true</dt><dd><code>[ステータス] = "完了"</code></dd>
+        <dt>Format these columns</dt><dd>プロジェクト名 / ステータス / 進捗率</dd>
+        <dt>Icon</dt><dd>✓(check)</dd>
+        <dt>Highlight color</dt><dd><span class="color-sample" style="background:#66bb6a;"></span><code>#66bb6a</code>(緑系)</dd>
+        <dt>Text color</dt><dd><span class="color-sample" style="background:#2e7d32;"></span><code>green</code>(緑)</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ ⑤ プロジェクト_中止 のFormat Rule</h4>
+
+    <div class="rule-card">
+      <div class="rule-title">🚫 プロジェクト_中止</div>
+      <dl class="rule-spec">
+        <dt>Rule name</dt><dd><code>プロジェクト_中止</code></dd>
+        <dt>For this data</dt><dd>プロジェクト</dd>
+        <dt>If this condition is true</dt><dd><code>[ステータス] = "中止"</code></dd>
+        <dt>Format these columns</dt><dd>プロジェクト名 / ステータス</dd>
+        <dt>Icon</dt><dd>🚫(ban)</dd>
+        <dt>Highlight color</dt><dd><span class="color-sample" style="background:#bdbdbd;"></span><code>#bdbdbd</code>(グレー)</dd>
+        <dt>Text color</dt><dd><span class="color-sample" style="background:#555;"></span><code>#555555</code>(濃いグレー)</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ 色彩設計のセオリー</h4>
+
+    <p>業務アプリでよく使われる<strong>「ステータス色のセオリー」</strong>があります。本マニュアルもこれに準拠しています。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:130px;">ステータス</th><th style="width:100px;">推奨色</th><th>理由</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:left;">計画中</td>
+          <td><span class="color-sample" style="background:#90caf9;"></span>水色</td>
+          <td style="text-align:left;">これから始まる、フレッシュな印象</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">進行中</td>
+          <td><span class="color-sample" style="background:#fff;"></span>白(色なし)</td>
+          <td style="text-align:left;">現在のアクティブ状態、何も装飾しない</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">完了</td>
+          <td><span class="color-sample" style="background:#66bb6a;"></span>緑</td>
+          <td style="text-align:left;">達成・成功を意味する色</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">中止</td>
+          <td><span class="color-sample" style="background:#bdbdbd;"></span>グレー</td>
+          <td style="text-align:left;">非アクティブ、グレーアウトを示す</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">エラー/超過</td>
+          <td><span class="color-sample" style="background:#c62828;"></span>赤</td>
+          <td style="text-align:left;">警告・緊急対応が必要</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-5 アイコンと仕上げ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-5">
+      <span class="sec-num">6-5</span> テーブルアイコンとアプリの仕上げ
+    </h3>
+
+    <p>最後に、アプリ全体の見た目を整える仕上げ作業を行います。テーブルのアイコン設定、アプリ名のロゴ設定、テーマカラーの調整など、業務アプリらしい完成度に仕上げます。</p>
+
+    <h4 class="sub-heading">■ ① テーブルアイコンの設定</h4>
+
+    <p>左メニューに表示される各テーブルのアイコンを、内容に合ったものに変更します。デフォルトは全テーブル同じ「データベース」アイコンですが、テーブルごとに分けると視認性が上がります。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">テーブル</th><th style="width:130px;">推奨アイコン</th><th>キーワード(検索用)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">メンバー</td><td>👤 user</td><td style="text-align:left;">user / users / person</td></tr>
+        <tr><td style="text-align:left;">カテゴリ</td><td>🏷️ tag</td><td style="text-align:left;">tag / tags / label</td></tr>
+        <tr><td style="text-align:left;">プロジェクト</td><td>📋 clipboard</td><td style="text-align:left;">clipboard / folder / briefcase</td></tr>
+        <tr><td style="text-align:left;">タスク</td><td>✅ check</td><td style="text-align:left;">check / tasks / list-check</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 設定手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>📱 Views アイコン</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>対象のビュー(たとえば <strong>メンバー</strong>)を選択し、設定パネルの <strong>Display</strong> セクションを展開します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Icon</strong> 欄のアイコン選択エリアで、上記のキーワード(例: <code>user</code>)を検索してアイコンを選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリック。他のビューも同様に設定します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ ② アプリ名とブランディング設定</h4>
+
+    <p>アプリ全体のテーマカラーやアイコンを設定します。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>⚙ Settings</strong> アイコン(歯車)をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>サブメニューから <strong>「Theme &amp; Brand」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Theme</strong> で <code>light</code> または <code>dark</code> を選びます。通常の業務アプリでは <code>light</code> が見やすいです。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Primary color</strong> を設定します。パレットから選ぶか、<strong>「+ Custom」</strong> をクリックして <code>#c62828</code>(赤系)を入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>必要に応じて <strong>Header &amp; Footer → Style</strong> で、ヘッダーのスタイル(3種類のアイコンから選択)を変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリック。プレビューに反映されます。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ ③ アプリ情報の設定</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Settings → <strong>「Information」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>App name</strong> が「プロジェクト管理アプリ」になっていることを確認します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Short description</strong> に簡潔な説明を入力します(例:「プロジェクトとタスクを管理する社内アプリ」)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>アプリのロゴを設定したい場合は、Settings → <strong>「Theme &amp; Brand」</strong> に戻り、<strong>App logo</strong> 欄にロゴ画像をアップロードします(任意)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリック。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 アイコンとブランディングの効果</div>
+      テーブルアイコンやテーマカラーの設定は、機能的には何も変わりませんが、<strong>業務ユーザーの定着率</strong> に大きく影響します。「使いやすそう」「自社のアプリらしい」と感じてもらえるかが、社内ツールが浸透するかの分かれ目になります。完成度の高いアプリは <strong>ユーザーが自然と毎日開きたくなる</strong> ものです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 6-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec6-6">
+      <span class="sec-num">6-6</span> 動作確認とまとめ
+    </h3>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>タスクの優先度=高 の行が赤系の色でハイライトされている</li>
+      <li>タスクの優先度=中 の行がオレンジ系の色で表示されている</li>
+      <li>期限超過の未完了タスクが濃い赤背景で目立つように表示されている</li>
+      <li>プロジェクト=完了 の行が緑系で表示されている</li>
+      <li>プロジェクト=中止 の行がグレーで表示されている</li>
+      <li>5つのテーブルすべてに、内容に合ったアイコンが設定されている</li>
+      <li>アプリの Theme と Primary color が設定されている</li>
+      <li>Settings → Information でアプリ名と説明が設定されている</li>
+    </ul>
+
+    <h4 class="sub-heading">■ プレビューで確認</h4>
+
+    <figure class="preview-figure" style="margin: 16px 0;">
+      <img src="images/ch06-06-01.png" alt="タスク一覧の完成形">
+      <figcaption>図6-6-1:タスク一覧 ─ 優先度と期限超過が色分けされている</figcaption>
+    </figure>
+
+    <figure class="preview-figure" style="margin: 16px 0;">
+      <img src="images/ch06-06-02.png" alt="プロジェクト一覧の完成形">
+      <figcaption>図6-6-2:プロジェクト一覧 ─ ステータス別の色分けが効いている</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ この章で作成した Format Rule 一覧</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:170px;">Rule名</th>
+          <th style="width:130px;">テーブル</th>
+          <th style="width:220px;">条件式</th>
+          <th>主な色</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">優先度_高</td><td>タスク</td><td style="text-align:left;"><code>[優先度] = "高"</code></td><td style="text-align:left;"><span class="color-sample" style="background:#ef5350;"></span>赤系</td></tr>
+        <tr><td>2</td><td style="text-align:left;">優先度_中</td><td>タスク</td><td style="text-align:left;"><code>[優先度] = "中"</code></td><td style="text-align:left;"><span class="color-sample" style="background:#ffb74d;"></span>オレンジ</td></tr>
+        <tr><td>3</td><td style="text-align:left;">期限超過_未完了</td><td>タスク</td><td style="text-align:left;"><code>AND([残日数] &lt; 0, [ステータス] &lt;&gt; "完了")</code></td><td style="text-align:left;"><span class="color-sample" style="background:#c62828;"></span>濃い赤</td></tr>
+        <tr><td>4</td><td style="text-align:left;">プロジェクト_完了</td><td>プロジェクト</td><td style="text-align:left;"><code>[ステータス] = "完了"</code></td><td style="text-align:left;"><span class="color-sample" style="background:#66bb6a;"></span>緑</td></tr>
+        <tr><td>5</td><td style="text-align:left;">プロジェクト_中止</td><td>プロジェクト</td><td style="text-align:left;"><code>[ステータス] = "中止"</code></td><td style="text-align:left;"><span class="color-sample" style="background:#bdbdbd;"></span>グレー</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第6章のまとめ(中級編との違い)</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">上級編で新しく扱ったポイント</th><th>使った仕組み</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">Virtual Columnを条件式に活用</td><td><code>[残日数]</code>を使った動的判定</td></tr>
+        <tr><td>2</td><td style="text-align:left;">複数条件のAND結合</td><td><code>AND(...)</code>で「期限超過かつ未完了」</td></tr>
+        <tr><td>3</td><td style="text-align:left;">優先順位を考えた色設計</td><td>ルールの並び順 + 色の重ね合わせ</td></tr>
+        <tr><td>4</td><td style="text-align:left;">業務アプリらしい色のセオリー</td><td>計画中=水色 / 完了=緑 / 中止=グレー</td></tr>
+        <tr><td>5</td><td style="text-align:left;">アプリ全体のブランディング</td><td>Theme / アイコン / 説明文の設定</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      第4章の Virtual Column と組み合わせた <strong>動的な色分け</strong>、業務アプリらしい <strong>色のセオリー</strong>、そして <strong>アプリ全体のブランディング</strong> までを実装しました。これでプロジェクト管理アプリは <strong>「機能的に使える」段階から「毎日使いたい」段階</strong> に進化します。次の第7章では、<strong>Sliceの応用と動的フィルタ</strong> を扱い、ユーザーごとに必要なデータだけを表示する高度な絞り込みを実装します。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      Format Rules はプレビューで <strong>Sync(🔄)</strong> を押すまで反映されないことがあります。動作確認の際は、Save 後に必ず Sync を実行してください。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter05.html">← 第5章:Dashboard Viewで可視化</a>
+      <a href="chapter07.html">第7章:Sliceの応用と動的フィルタ →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新:2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

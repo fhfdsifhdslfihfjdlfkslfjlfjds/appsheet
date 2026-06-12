@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第2章：複合リレーションの構築</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー（上級編：ピンク〜赤系） */
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%);
+    border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #c62828; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828;
+  }
+  .section-heading .sec-num {
+    background: #c62828; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #ef5350; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* タイプバッジ */
+  .type-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700; color: #fff; white-space: nowrap;
+  }
+  .type-badge.key   { background: #c62828; }
+  .type-badge.ref   { background: #1976d2; }
+  .type-badge.text  { background: #757575; }
+  .type-badge.enum  { background: #f9a825; color: #333; }
+  .type-badge.date  { background: #00897b; }
+  .type-badge.dt    { background: #00838f; }
+  .type-badge.email { background: #5e35b1; }
+  .type-badge.color { background: #d81b60; }
+  .type-badge.long  { background: #6d4c41; }
+  .type-badge.num   { background: #43a047; }
+  .type-badge.vc    { background: #8e24aa; }
+
+  /* コードブロック */
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 共通：図 */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #f48fb1; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+
+  /* 関係図 */
+  .relation-diagram {
+    background: linear-gradient(135deg, #fdf0f3 0%, #fce4ec 100%);
+    border: 1px solid #f48fb1; border-radius: 12px;
+    padding: 28px 20px; margin: 24px 0;
+    overflow-x: auto;
+  }
+  .relation-row {
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin: 12px 0;
+  }
+  .relation-box {
+    background: #fff; border: 2px solid #c62828; border-radius: 8px;
+    padding: 12px 16px; min-width: 130px; text-align: center;
+  }
+  .relation-box .name {
+    font-weight: 700; color: #c62828; font-size: 14px;
+  }
+  .relation-box .col {
+    font-size: 11px; color: #888; margin-top: 4px;
+  }
+  .relation-arrow {
+    color: #c62828; font-weight: 700; font-size: 16px;
+    display: flex; flex-direction: column; align-items: center; min-width: 60px;
+  }
+  .relation-arrow .arrow-label {
+    font-size: 10px; color: #888; margin-top: 2px;
+  }
+
+  /* スプレッドシートサンプルデータ */
+  .sample-data-box {
+    background: #fff; border: 1px solid #d4dce8; border-radius: 8px;
+    padding: 20px 24px; margin: 16px 0 24px;
+    overflow-x: auto;
+  }
+  .sample-data-box .sample-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; gap: 12px; flex-wrap: wrap;
+  }
+  .sample-data-box .sample-title {
+    font-weight: 700; color: #c62828; font-size: 14px;
+  }
+  .copy-btn {
+    background: #c62828; color: #fff; border: none; border-radius: 6px;
+    padding: 7px 16px; font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: background .15s; white-space: nowrap;
+    font-family: 'メイリオ', Meiryo, sans-serif;
+  }
+  .copy-btn:hover { background: #8e0000; }
+  .copy-btn.copied { background: #43a047; }
+  .copy-btn .icon { margin-right: 4px; }
+  .sample-table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+    font-family: 'Consolas', 'メイリオ', monospace;
+  }
+  .sample-table th {
+    background: #fce4ec; color: #c62828; padding: 6px 10px;
+    border: 1px solid #f48fb1; text-align: left; white-space: nowrap;
+  }
+  .sample-table td {
+    padding: 6px 10px; border: 1px solid #e0e6ef; white-space: nowrap;
+  }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #c62828; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #8e0000; }
+  .page-nav a.disabled { background: #d4dce8; color: #888; cursor: not-allowed; pointer-events: none; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">上級編</a>
+    <span class="sep">▸</span>
+    <strong>第2章：複合リレーションの構築</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">2</div>
+      <h2>複合リレーションの構築</h2>
+      <div class="chapter-sub">データ設計編 ─ 5テーブルを作成して3階層リレーションを構築する</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step active"><div class="dot">2</div><div class="label">複合Ref</div></div>
+        <div class="progress-step"><div class="dot">3</div><div class="label">Security</div></div>
+        <div class="progress-step"><div class="dot">4</div><div class="label">高度関数</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">Dashboard</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式UX</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Slice応用</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec2-1">
+          <span class="toc-num">2-1</span>
+          <span class="toc-text"><strong>5テーブルの全体像とリレーション</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-2">
+          <span class="toc-num">2-2</span>
+          <span class="toc-text"><strong>スプレッドシートの準備</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-3">
+          <span class="toc-num">2-3</span>
+          <span class="toc-text"><strong>AppSheetへのテーブル取り込み</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-4">
+          <span class="toc-num">2-4</span>
+          <span class="toc-text"><strong>各テーブルのカラム設計</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-5">
+          <span class="toc-num">2-5</span>
+          <span class="toc-text"><strong>Refと「Is a part of?」で3階層リレーションを構築</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec2-6">
+          <span class="toc-num">2-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-1 5テーブルの全体像 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-1">
+      <span class="sec-num">2-1</span> 5テーブルの全体像とリレーション
+    </h3>
+
+    <p>第1章で確認した5テーブル構成を、本章で実際に作成します。中級編との最大の違いは、<strong>Ref（参照）が複数の階層にわたって連鎖する</strong> 点です。</p>
+
+    <h4 class="sub-heading">■ リレーションの全体像</h4>
+
+    <div class="relation-diagram">
+      <!-- マスタ層 -->
+      <div class="relation-row">
+        <div class="relation-box" style="border-color:#8e44ad;">
+          <div class="name" style="color:#8e44ad;">👤 メンバー</div>
+          <div class="col">マスタ</div>
+        </div>
+        <div class="relation-box" style="border-color:#f9a825;">
+          <div class="name" style="color:#f9a825;">🏷️ カテゴリ</div>
+          <div class="col">マスタ</div>
+        </div>
+      </div>
+
+      <div style="text-align:center; font-size:20px; color:#c62828; margin:8px 0;">↓ Ref</div>
+
+      <!-- プロジェクト層 -->
+      <div class="relation-row">
+        <div class="relation-box" style="border-color:#1976d2; min-width:240px;">
+          <div class="name" style="color:#1976d2;">📋 プロジェクト</div>
+          <div class="col">担当PM(Ref→メンバー)<br>カテゴリID(Ref→カテゴリ)</div>
+        </div>
+      </div>
+
+      <div style="text-align:center; font-size:20px; color:#c62828; margin:8px 0;">↓ 1対多（Is a part of?）</div>
+
+      <!-- タスク層 -->
+      <div class="relation-row">
+        <div class="relation-box" style="border-color:#c62828; min-width:240px;">
+          <div class="name">✅ タスク</div>
+          <div class="col">プロジェクトID(Ref→プロジェクト)<br>担当者(Ref→メンバー)</div>
+        </div>
+      </div>
+
+      <div style="text-align:center; font-size:20px; color:#c62828; margin:8px 0;">↓ 1対多（Is a part of?）</div>
+
+      <!-- コメント層 -->
+      <div class="relation-row">
+        <div class="relation-box" style="border-color:#00897b; min-width:240px;">
+          <div class="name" style="color:#00897b;">💬 コメント</div>
+          <div class="col">タスクID(Ref→タスク)<br>投稿者(Ref→メンバー)</div>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 中級編との違い ─ 「3階層リレーション」と「Is a part of?」</h4>
+
+    <p>中級編の勤怠管理アプリでは、リレーションは <strong>社員マスタ → 勤怠記録</strong> のような <strong>2階層</strong> でした。今回は <strong>プロジェクト → タスク → コメント</strong> と <strong>3階層</strong> に深くなります。</p>
+
+    <p>また、今回は単純な Ref に加えて <strong>「Is a part of?」</strong> という設定を使います。これは「子レコードを親と一緒に扱う」ための設定で、次のような効果があります。</p>
+
+    <div class="point-box">
+      <div class="point-title">📌 「Is a part of?」を ON にすると何が起きるか</div>
+      <ul>
+        <li>親レコードを削除すると、<strong>関連する子レコードも自動的に削除</strong> される</li>
+        <li>親の詳細画面に <strong>子レコードを inline で表示</strong> しやすくなる</li>
+        <li>親レコードのフォームから直接 <strong>子レコードを追加</strong> できる</li>
+      </ul>
+      この設定により、プロジェクトを削除したらタスクとコメントもまとめて削除される、といった一貫したデータ管理が実現できます。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-2 スプレッドシートの準備 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-2">
+      <span class="sec-num">2-2</span> スプレッドシートの準備
+    </h3>
+
+    <p>第1章でダウンロードした練習用ファイル <strong>「【上級編】プロジェクト管理アプリ_サンプルデータ.gsheet」</strong> を使用します。このファイルには5つのシートがあり、それぞれが5つのテーブルに対応します。</p>
+
+    <h4 class="sub-heading">■ スプレッドシートの構成</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:160px;">シート名</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">メンバー</td><td style="text-align:left;">チームメンバーのマスタ（6名分のサンプル）</td></tr>
+        <tr><td>2</td><td style="text-align:left;">カテゴリ</td><td style="text-align:left;">プロジェクトの分類マスタ（4種類）</td></tr>
+        <tr><td>3</td><td style="text-align:left;">プロジェクト</td><td style="text-align:left;">プロジェクトデータ（5件のサンプル）</td></tr>
+        <tr><td>4</td><td style="text-align:left;">タスク</td><td style="text-align:left;">タスクデータ（12件のサンプル）</td></tr>
+        <tr><td>5</td><td style="text-align:left;">コメント</td><td style="text-align:left;">コメントデータ（8件のサンプル）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ サンプルデータ（コピペでスプレッドシートに貼り付け）</h4>
+
+    <p>下記がスプレッドシートに入力するサンプルデータです。各テーブルの右上の <strong>「📋 コピー」</strong> ボタンをクリックすると、ヘッダー行を含むデータがクリップボードにコピーされます。スプレッドシートの該当シートの <strong>A1セルに貼り付け</strong> してください（タブ区切りなので、自動的に各セルに分かれます）。</p>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ コピーする順番について</div>
+      <strong>必ず上から順番に</strong>（メンバー → カテゴリ → プロジェクト → タスク → コメント）コピペしてください。プロジェクト以降は前のシートのIDを参照しているため、順序が前後すると整合性が取れません。
+    </div>
+
+    <!-- メンバーシート -->
+    <div class="sample-data-box">
+      <div class="sample-header">
+        <div class="sample-title">📋 メンバーシート（6件）</div>
+        <button class="copy-btn" onclick="copyTSV(this, 'tsv-members')"><span class="icon">📋</span>コピー</button>
+      </div>
+      <textarea id="tsv-members" style="position:absolute;left:-9999px;top:-9999px;">メンバーID	氏名	メールアドレス	ロール	所属部署
+M001	山田太郎	yamada@example.com	管理者	開発部
+M002	佐藤花子	sato@example.com	メンバー	開発部
+M003	鈴木一郎	suzuki@example.com	メンバー	営業部
+M004	田中次郎	tanaka@example.com	管理者	営業部
+M005	伊藤健一	ito@example.com	メンバー	開発部
+M006	髙橋美咲	takahashi@example.com	メンバー	総務部</textarea>
+      <table class="sample-table">
+        <thead>
+          <tr><th>メンバーID</th><th>氏名</th><th>メールアドレス</th><th>ロール</th><th>所属部署</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>M001</td><td>山田太郎</td><td>yamada@example.com</td><td>管理者</td><td>開発部</td></tr>
+          <tr><td>M002</td><td>佐藤花子</td><td>sato@example.com</td><td>メンバー</td><td>開発部</td></tr>
+          <tr><td>M003</td><td>鈴木一郎</td><td>suzuki@example.com</td><td>メンバー</td><td>営業部</td></tr>
+          <tr><td>M004</td><td>田中次郎</td><td>tanaka@example.com</td><td>管理者</td><td>営業部</td></tr>
+          <tr><td>M005</td><td>伊藤健一</td><td>ito@example.com</td><td>メンバー</td><td>開発部</td></tr>
+          <tr><td>M006</td><td>髙橋美咲</td><td>takahashi@example.com</td><td>メンバー</td><td>総務部</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- カテゴリシート -->
+    <div class="sample-data-box">
+      <div class="sample-header">
+        <div class="sample-title">🏷️ カテゴリシート（4件）</div>
+        <button class="copy-btn" onclick="copyTSV(this, 'tsv-categories')"><span class="icon">📋</span>コピー</button>
+      </div>
+      <textarea id="tsv-categories" style="position:absolute;left:-9999px;top:-9999px;">カテゴリID	カテゴリ名	カテゴリ色
+C001	システム開発	#1976d2
+C002	営業案件	#43a047
+C003	社内施策	#f9a825
+C004	R&D	#8e24aa</textarea>
+      <table class="sample-table">
+        <thead>
+          <tr><th>カテゴリID</th><th>カテゴリ名</th><th>カテゴリ色</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>C001</td><td>システム開発</td><td>#1976d2</td></tr>
+          <tr><td>C002</td><td>営業案件</td><td>#43a047</td></tr>
+          <tr><td>C003</td><td>社内施策</td><td>#f9a825</td></tr>
+          <tr><td>C004</td><td>R&amp;D</td><td>#8e24aa</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- プロジェクトシート -->
+    <div class="sample-data-box">
+      <div class="sample-header">
+        <div class="sample-title">📋 プロジェクトシート（5件）</div>
+        <button class="copy-btn" onclick="copyTSV(this, 'tsv-projects')"><span class="icon">📋</span>コピー</button>
+      </div>
+      <textarea id="tsv-projects" style="position:absolute;left:-9999px;top:-9999px;">プロジェクトID	プロジェクト名	カテゴリID	担当PM	開始日	終了予定日	ステータス	説明
+P001	勤怠管理システム改修	C001	M001	2026/04/01	2026/06/30	進行中	既存の勤怠管理システムをリプレース
+P002	大手企業A社向け提案	C002	M004	2026/03/15	2026/05/15	進行中	新サービスの提案資料作成と商談対応
+P003	社内ワークフロー整備	C003	M001	2026/05/01	2026/07/31	計画中	承認フローの見直しと電子化
+P004	AI検証PoC	C004	M001	2026/02/01	2026/04/30	完了	生成AI活用の社内検証
+P005	新規顧客B社案件	C002	M004	2026/04/15	2026/07/15	進行中	定期受注の獲得</textarea>
+      <table class="sample-table">
+        <thead>
+          <tr><th>プロジェクトID</th><th>プロジェクト名</th><th>カテゴリID</th><th>担当PM</th><th>開始日</th><th>終了予定日</th><th>ステータス</th><th>説明</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>P001</td><td>勤怠管理システム改修</td><td>C001</td><td>M001</td><td>2026/04/01</td><td>2026/06/30</td><td>進行中</td><td>既存の勤怠管理システムをリプレース</td></tr>
+          <tr><td>P002</td><td>大手企業A社向け提案</td><td>C002</td><td>M004</td><td>2026/03/15</td><td>2026/05/15</td><td>進行中</td><td>新サービスの提案資料作成と商談対応</td></tr>
+          <tr><td>P003</td><td>社内ワークフロー整備</td><td>C003</td><td>M001</td><td>2026/05/01</td><td>2026/07/31</td><td>計画中</td><td>承認フローの見直しと電子化</td></tr>
+          <tr><td>P004</td><td>AI検証PoC</td><td>C004</td><td>M001</td><td>2026/02/01</td><td>2026/04/30</td><td>完了</td><td>生成AI活用の社内検証</td></tr>
+          <tr><td>P005</td><td>新規顧客B社案件</td><td>C002</td><td>M004</td><td>2026/04/15</td><td>2026/07/15</td><td>進行中</td><td>定期受注の獲得</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- タスクシート -->
+    <div class="sample-data-box">
+      <div class="sample-header">
+        <div class="sample-title">✅ タスクシート（12件）</div>
+        <button class="copy-btn" onclick="copyTSV(this, 'tsv-tasks')"><span class="icon">📋</span>コピー</button>
+      </div>
+      <textarea id="tsv-tasks" style="position:absolute;left:-9999px;top:-9999px;">タスクID	プロジェクトID	タスク名	担当者	優先度	ステータス	期限	完了日	工数（時間）
+T001	P001	要件定義書作成	M002	高	完了	2026/04/15	2026/04/14	16
+T002	P001	API設計	M002	高	進行中	2026/04/30		20
+T003	P001	DB設計レビュー	M005	中	未着手	2026/05/10		8
+T004	P001	画面モックアップ作成	M005	中	進行中	2026/05/20		12
+T005	P002	提案資料作成	M003	高	完了	2026/04/05	2026/04/04	10
+T006	P002	A社プレゼン	M004	高	レビュー中	2026/04/20		4
+T007	P002	契約書ドラフト	M003	中	未着手	2026/05/01		6
+T008	P003	現状フロー調査	M006	低	進行中	2026/05/15		8
+T009	P004	AI検証レポート	M002	中	完了	2026/04/25	2026/04/24	24
+T010	P005	B社ヒアリング	M003	高	進行中	2026/04/25		3
+T011	P005	見積書作成	M003	中	未着手	2026/05/10		4
+T012	P001	テスト計画書	M005	低	未着手	2026/06/01		10</textarea>
+      <table class="sample-table">
+        <thead>
+          <tr><th>タスクID</th><th>プロジェクトID</th><th>タスク名</th><th>担当者</th><th>優先度</th><th>ステータス</th><th>期限</th><th>完了日</th><th>工数</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>T001</td><td>P001</td><td>要件定義書作成</td><td>M002</td><td>高</td><td>完了</td><td>2026/04/15</td><td>2026/04/14</td><td>16</td></tr>
+          <tr><td>T002</td><td>P001</td><td>API設計</td><td>M002</td><td>高</td><td>進行中</td><td>2026/04/30</td><td></td><td>20</td></tr>
+          <tr><td>T003</td><td>P001</td><td>DB設計レビュー</td><td>M005</td><td>中</td><td>未着手</td><td>2026/05/10</td><td></td><td>8</td></tr>
+          <tr><td>T004</td><td>P001</td><td>画面モックアップ作成</td><td>M005</td><td>中</td><td>進行中</td><td>2026/05/20</td><td></td><td>12</td></tr>
+          <tr><td>T005</td><td>P002</td><td>提案資料作成</td><td>M003</td><td>高</td><td>完了</td><td>2026/04/05</td><td>2026/04/04</td><td>10</td></tr>
+          <tr><td>T006</td><td>P002</td><td>A社プレゼン</td><td>M004</td><td>高</td><td>レビュー中</td><td>2026/04/20</td><td></td><td>4</td></tr>
+          <tr><td>T007</td><td>P002</td><td>契約書ドラフト</td><td>M003</td><td>中</td><td>未着手</td><td>2026/05/01</td><td></td><td>6</td></tr>
+          <tr><td>T008</td><td>P003</td><td>現状フロー調査</td><td>M006</td><td>低</td><td>進行中</td><td>2026/05/15</td><td></td><td>8</td></tr>
+          <tr><td>T009</td><td>P004</td><td>AI検証レポート</td><td>M002</td><td>中</td><td>完了</td><td>2026/04/25</td><td>2026/04/24</td><td>24</td></tr>
+          <tr><td>T010</td><td>P005</td><td>B社ヒアリング</td><td>M003</td><td>高</td><td>進行中</td><td>2026/04/25</td><td></td><td>3</td></tr>
+          <tr><td>T011</td><td>P005</td><td>見積書作成</td><td>M003</td><td>中</td><td>未着手</td><td>2026/05/10</td><td></td><td>4</td></tr>
+          <tr><td>T012</td><td>P001</td><td>テスト計画書</td><td>M005</td><td>低</td><td>未着手</td><td>2026/06/01</td><td></td><td>10</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- コメントシート -->
+    <div class="sample-data-box">
+      <div class="sample-header">
+        <div class="sample-title">💬 コメントシート（8件）</div>
+        <button class="copy-btn" onclick="copyTSV(this, 'tsv-comments')"><span class="icon">📋</span>コピー</button>
+      </div>
+      <textarea id="tsv-comments" style="position:absolute;left:-9999px;top:-9999px;">コメントID	タスクID	投稿者	投稿日時	コメント本文
+CM001	T002	M002	2026/04/05 10:30:00	API仕様のレビュー、本日中に提出します
+CM002	T002	M001	2026/04/05 14:00:00	OK、確認します
+CM003	T006	M004	2026/04/15 09:15:00	プレゼン資料の最終確認お願いします
+CM004	T006	M003	2026/04/15 11:20:00	資料は問題ないと思います。本番がんばってください
+CM005	T004	M005	2026/04/10 16:45:00	モックアップの方向性、相談したいです
+CM006	T004	M001	2026/04/11 09:00:00	午後に打ち合わせしましょう
+CM007	T008	M006	2026/04/20 13:30:00	現状ヒアリング、3部署完了しました
+CM008	T010	M003	2026/04/18 10:00:00	B社訪問は来週月曜に決まりました</textarea>
+      <table class="sample-table">
+        <thead>
+          <tr><th>コメントID</th><th>タスクID</th><th>投稿者</th><th>投稿日時</th><th>コメント本文</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>CM001</td><td>T002</td><td>M002</td><td>2026/04/05 10:30:00</td><td>API仕様のレビュー、本日中に提出します</td></tr>
+          <tr><td>CM002</td><td>T002</td><td>M001</td><td>2026/04/05 14:00:00</td><td>OK、確認します</td></tr>
+          <tr><td>CM003</td><td>T006</td><td>M004</td><td>2026/04/15 09:15:00</td><td>プレゼン資料の最終確認お願いします</td></tr>
+          <tr><td>CM004</td><td>T006</td><td>M003</td><td>2026/04/15 11:20:00</td><td>資料は問題ないと思います。本番がんばってください</td></tr>
+          <tr><td>CM005</td><td>T004</td><td>M005</td><td>2026/04/10 16:45:00</td><td>モックアップの方向性、相談したいです</td></tr>
+          <tr><td>CM006</td><td>T004</td><td>M001</td><td>2026/04/11 09:00:00</td><td>午後に打ち合わせしましょう</td></tr>
+          <tr><td>CM007</td><td>T008</td><td>M006</td><td>2026/04/20 13:30:00</td><td>現状ヒアリング、3部署完了しました</td></tr>
+          <tr><td>CM008</td><td>T010</td><td>M003</td><td>2026/04/18 10:00:00</td><td>B社訪問は来週月曜に決まりました</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 スプレッドシートでの貼り付け手順</div>
+      <ol style="margin: 4px 0 0 20px;">
+        <li>Google スプレッドシートで対象のシート（例：「メンバー」シート）を開く</li>
+        <li><strong>A1セル</strong> をクリックして選択</li>
+        <li><strong>Ctrl+V</strong>（Mac は <strong>⌘+V</strong>）で貼り付け</li>
+        <li>タブ区切りデータが自動で各セルに展開される</li>
+      </ol>
+      ※ 既に1行目にヘッダーがある場合は、A1セルではなく <strong>2行目（A2）以降のデータ部分のみ</strong> を選んでコピーし直してください。
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 サンプルデータの活用</div>
+      これらのサンプルデータは、第3章以降で <strong>Security Filter のテスト</strong> や <strong>進捗率の自動計算</strong> を確認する際に重要な役割を果たします。データを書き換える前に、まずはこのままの状態で作業を進めてください。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-3 AppSheetへのテーブル取り込み -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-3">
+      <span class="sec-num">2-3</span> AppSheetへのテーブル取り込み
+    </h3>
+
+    <p>スプレッドシートの準備ができたら、<strong>スプレッドシート側から直接 AppSheet を起動</strong> してアプリを作成します。この方法だと、シートとアプリが自動的にリンクされるため、後からデータソースの設定をする手間が省けます。</p>
+
+    <h4 class="sub-heading">■ 新規アプリの作成（スプレッドシートから起動）</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>サンプルデータを貼り付けた <strong>Google スプレッドシートを開きます</strong>。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>スプレッドシート上部のメニューバーから <strong>「拡張機能」→「AppSheet」→「アプリを作成」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>AppSheet が新しいタブで開き、スプレッドシートを元にしたアプリの初期版が自動生成されます。最初に開かれているシート（通常は1枚目のシート）が最初のテーブルとして取り込まれます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>エディタ右上の <strong>アプリ名</strong>（自動でスプレッドシート名から生成されています）をクリックして <strong>「プロジェクト管理アプリ」</strong> に変更し、<strong>Save</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data アイコン</strong> をクリックして Tables 一覧を開きます。最初に取り込まれたシート（1テーブル）のみが表示されている状態です。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p>残りの4テーブルを取り込みます。<strong>「+ New Table」</strong> をクリックし、同じスプレッドシート内の <strong>他のシート</strong>（メンバー / カテゴリ / プロジェクト / タスク / コメント のうち、まだ取り込まれていないもの）を順番に選択します。これを4回繰り返して、5テーブルすべてを取り込みます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">7</div>
+        <div class="proc-body">
+          <p>5テーブルすべてが取り込まれたら、Data → Tables 画面で次の通り設定します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 スプレッドシートから起動するメリット</div>
+      <ul style="margin: 4px 0 0 20px;">
+        <li><strong>データソースが自動でリンク</strong>される（AppSheet 側でファイル選択ダイアログを開く必要がない）</li>
+        <li>スプレッドシートと AppSheet が <strong>同じ Google アカウント</strong> で紐づくため、権限設定が自動化される</li>
+        <li>後でスプレッドシートを編集したときに、AppSheet 側で <strong>Sync</strong> を押すだけで反映される</li>
+      </ul>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 「拡張機能」メニューに AppSheet が表示されない場合</div>
+      初めて AppSheet を使う Google アカウントの場合、メニューに表示されないことがあります。その場合は <strong>「拡張機能」→「アドオン」→「アドオンを取得」</strong> から <strong>AppSheet</strong> を検索してインストールしてください（無料）。インストール後、スプレッドシートを再読み込みすればメニューに表示されます。
+    </div>
+
+    <h4 class="sub-heading">■ テーブルの基本設定</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">テーブル名</th><th style="width:200px;">Are updates allowed?</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">メンバー</td><td style="text-align:left;">Read-Only</td><td style="text-align:left;">管理者だけが別途編集（運用上の安全策）</td></tr>
+        <tr><td style="text-align:left;">カテゴリ</td><td style="text-align:left;">Read-Only</td><td style="text-align:left;">マスタデータのため</td></tr>
+        <tr><td style="text-align:left;">プロジェクト</td><td style="text-align:left;">Adds, Updates, Deletes</td><td style="text-align:left;">PMが日々操作する</td></tr>
+        <tr><td style="text-align:left;">タスク</td><td style="text-align:left;">Adds, Updates, Deletes</td><td style="text-align:left;">メンバーがステータス更新する</td></tr>
+        <tr><td style="text-align:left;">コメント</td><td style="text-align:left;">Adds, Updates</td><td style="text-align:left;">削除は履歴保全のため不可</td></tr>
+      </tbody>
+    </table>
+
+    <figure class="figure">
+      <img src="images/ch02-03-01.png" alt="5テーブルが取り込まれた状態">
+      <figcaption>図2-3-1：Data → Tables 画面に5つのテーブルが並んだ状態</figcaption>
+    </figure>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-4 各テーブルのカラム設計 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-4">
+      <span class="sec-num">2-4</span> 各テーブルのカラム設計
+    </h3>
+
+    <p>テーブルを取り込んだら、各カラムの <strong>Type</strong>（型）と <strong>KEY/LABEL</strong> を正しく設定します。AppSheet が自動推定した内容を、業務に合った形に修正していきます。</p>
+
+    <div class="note-box">
+      <div class="note-title">💡 Virtual Column について</div>
+      下記の表で <span class="type-badge vc">VC</span> と書いたカラムは <strong>Virtual Column</strong>（自動計算カラム）です。これらは <strong>第4章</strong> で設定するため、本章では <strong>通常カラムだけ</strong> 設定すれば OK です。
+    </div>
+
+    <h4 class="sub-heading">■ ① メンバーテーブル</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:170px;">カラム名</th><th style="width:160px;">Type</th><th style="width:90px;">Key</th><th style="width:90px;">Label</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">メンバーID</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>✓</td><td>—</td><td style="text-align:left;">主キー</td></tr>
+        <tr><td style="text-align:left;">氏名</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>—</td><td>✓</td><td style="text-align:left;">表示名</td></tr>
+        <tr><td style="text-align:left;">メールアドレス</td><td style="text-align:left;"><span class="type-badge email">Email</span></td><td>—</td><td>—</td><td style="text-align:left;">Security Filter で使用（第3章）</td></tr>
+        <tr><td style="text-align:left;">ロール</td><td style="text-align:left;"><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td style="text-align:left;">管理者 / メンバー</td></tr>
+        <tr><td style="text-align:left;">所属部署</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ ② カテゴリテーブル</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:170px;">カラム名</th><th style="width:160px;">Type</th><th style="width:90px;">Key</th><th style="width:90px;">Label</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">カテゴリID</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>✓</td><td>—</td><td style="text-align:left;">主キー</td></tr>
+        <tr><td style="text-align:left;">カテゴリ名</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>—</td><td>✓</td><td style="text-align:left;">表示名</td></tr>
+        <tr><td style="text-align:left;">カテゴリ色</td><td style="text-align:left;"><span class="type-badge color">Color</span></td><td>—</td><td>—</td><td style="text-align:left;">第6章の Format Rules で使用</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ ③ プロジェクトテーブル</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:170px;">カラム名</th><th style="width:160px;">Type</th><th style="width:90px;">Key</th><th style="width:90px;">Label</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">プロジェクトID</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>✓</td><td>—</td><td style="text-align:left;">主キー</td></tr>
+        <tr><td style="text-align:left;">プロジェクト名</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>—</td><td>✓</td><td style="text-align:left;">表示名</td></tr>
+        <tr><td style="text-align:left;">カテゴリID</td><td style="text-align:left;"><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td style="text-align:left;">→ カテゴリ</td></tr>
+        <tr><td style="text-align:left;">担当PM</td><td style="text-align:left;"><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td style="text-align:left;">→ メンバー</td></tr>
+        <tr><td style="text-align:left;">開始日</td><td style="text-align:left;"><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+        <tr><td style="text-align:left;">終了予定日</td><td style="text-align:left;"><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+        <tr><td style="text-align:left;">ステータス</td><td style="text-align:left;"><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td style="text-align:left;">計画中 / 進行中 / 完了 / 中止</td></tr>
+        <tr><td style="text-align:left;">説明</td><td style="text-align:left;"><span class="type-badge long">LongText</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+        <tr style="opacity:.55;"><td style="text-align:left;">進捗率</td><td style="text-align:left;"><span class="type-badge vc">VC</span></td><td>—</td><td>—</td><td style="text-align:left;">第4章で設定</td></tr>
+        <tr style="opacity:.55;"><td style="text-align:left;">タスク数</td><td style="text-align:left;"><span class="type-badge vc">VC</span></td><td>—</td><td>—</td><td style="text-align:left;">第4章で設定</td></tr>
+        <tr style="opacity:.55;"><td style="text-align:left;">完了タスク数</td><td style="text-align:left;"><span class="type-badge vc">VC</span></td><td>—</td><td>—</td><td style="text-align:left;">第4章で設定</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ ④ タスクテーブル</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:170px;">カラム名</th><th style="width:160px;">Type</th><th style="width:90px;">Key</th><th style="width:90px;">Label</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">タスクID</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>✓</td><td>—</td><td style="text-align:left;">主キー</td></tr>
+        <tr><td style="text-align:left;">プロジェクトID</td><td style="text-align:left;"><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td style="text-align:left;">→ プロジェクト ／ <strong>Is a part of? = ON</strong></td></tr>
+        <tr><td style="text-align:left;">タスク名</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>—</td><td>✓</td><td style="text-align:left;">表示名</td></tr>
+        <tr><td style="text-align:left;">担当者</td><td style="text-align:left;"><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td style="text-align:left;">→ メンバー</td></tr>
+        <tr><td style="text-align:left;">優先度</td><td style="text-align:left;"><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td style="text-align:left;">高 / 中 / 低</td></tr>
+        <tr><td style="text-align:left;">ステータス</td><td style="text-align:left;"><span class="type-badge enum">Enum</span></td><td>—</td><td>—</td><td style="text-align:left;">未着手 / 進行中 / レビュー中 / 完了</td></tr>
+        <tr><td style="text-align:left;">期限</td><td style="text-align:left;"><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+        <tr><td style="text-align:left;">完了日</td><td style="text-align:left;"><span class="type-badge date">Date</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+        <tr><td style="text-align:left;">工数（時間）</td><td style="text-align:left;"><span class="type-badge num">Number</span></td><td>—</td><td>—</td><td style="text-align:left;">—</td></tr>
+        <tr style="opacity:.55;"><td style="text-align:left;">残日数</td><td style="text-align:left;"><span class="type-badge vc">VC</span></td><td>—</td><td>—</td><td style="text-align:left;">第4章で設定</td></tr>
+        <tr style="opacity:.55;"><td style="text-align:left;">期限ステータス</td><td style="text-align:left;"><span class="type-badge vc">VC</span></td><td>—</td><td>—</td><td style="text-align:left;">第4章で設定</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ ⑤ コメントテーブル</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:170px;">カラム名</th><th style="width:160px;">Type</th><th style="width:90px;">Key</th><th style="width:90px;">Label</th><th>備考</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">コメントID</td><td style="text-align:left;"><span class="type-badge text">Text</span></td><td>✓</td><td>—</td><td style="text-align:left;">主キー</td></tr>
+        <tr><td style="text-align:left;">タスクID</td><td style="text-align:left;"><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td style="text-align:left;">→ タスク ／ <strong>Is a part of? = ON</strong></td></tr>
+        <tr><td style="text-align:left;">投稿者</td><td style="text-align:left;"><span class="type-badge ref">Ref</span></td><td>—</td><td>—</td><td style="text-align:left;">→ メンバー</td></tr>
+        <tr><td style="text-align:left;">投稿日時</td><td style="text-align:left;"><span class="type-badge dt">DateTime</span></td><td>—</td><td>—</td><td style="text-align:left;">Initial value = <code>NOW()</code></td></tr>
+        <tr><td style="text-align:left;">コメント本文</td><td style="text-align:left;"><span class="type-badge long">LongText</span></td><td>—</td><td>✓</td><td style="text-align:left;">表示名（一覧表示用）</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Enum 値の設定</h4>
+
+    <p>Enum 型のカラムには、選択肢を明示的に設定します。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">テーブル</th><th style="width:140px;">カラム</th><th>選択肢（Values）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">メンバー</td><td style="text-align:left;">ロール</td><td style="text-align:left;">管理者 / メンバー</td></tr>
+        <tr><td style="text-align:left;">プロジェクト</td><td style="text-align:left;">ステータス</td><td style="text-align:left;">計画中 / 進行中 / 完了 / 中止</td></tr>
+        <tr><td style="text-align:left;">タスク</td><td style="text-align:left;">優先度</td><td style="text-align:left;">高 / 中 / 低</td></tr>
+        <tr><td style="text-align:left;">タスク</td><td style="text-align:left;">ステータス</td><td style="text-align:left;">未着手 / 進行中 / レビュー中 / 完了</td></tr>
+      </tbody>
+    </table>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-5 Ref と「Is a part of?」 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-5">
+      <span class="sec-num">2-5</span> Refと「Is a part of?」で3階層リレーションを構築
+    </h3>
+
+    <p>カラム設定の中で <strong>最も重要なのが Ref と「Is a part of?」の設定</strong> です。この章のキモの部分です。</p>
+
+    <h4 class="sub-heading">■ Ref の基本設定（中級編の復習）</h4>
+
+    <p>Ref 型のカラムは、別テーブルへのリンクを作る型です。設定するのは次の2つ：</p>
+
+    <ol style="margin: 8px 0 16px 28px;">
+      <li><strong>Type</strong> を <code>Ref</code> に変更</li>
+      <li><strong>Source table</strong> で参照先テーブルを指定</li>
+    </ol>
+
+    <h4 class="sub-heading">■ 上級編のキモ ─ 「Is a part of?」の使い分け</h4>
+
+    <p>本アプリでは Ref を使うカラムが <strong>合計5つ</strong> ありますが、<strong>「Is a part of?」を ON にするのは2つだけ</strong> です。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:130px;">カラム</th>
+          <th style="width:160px;">Source table</th>
+          <th style="width:150px;">Is a part of?</th>
+          <th>理由</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#fce4ec;">
+          <td style="text-align:left;">タスク.プロジェクトID</td>
+          <td style="text-align:left;">プロジェクト</td>
+          <td style="text-align:left; font-weight:700; color:#c62828;">✓ ON</td>
+          <td style="text-align:left;">タスクはプロジェクトに「属する」子レコード</td>
+        </tr>
+        <tr style="background:#fce4ec;">
+          <td style="text-align:left;">コメント.タスクID</td>
+          <td style="text-align:left;">タスク</td>
+          <td style="text-align:left; font-weight:700; color:#c62828;">✓ ON</td>
+          <td style="text-align:left;">コメントはタスクに「属する」子レコード</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">プロジェクト.カテゴリID</td>
+          <td style="text-align:left;">カテゴリ</td>
+          <td style="text-align:left;">OFF</td>
+          <td style="text-align:left;">カテゴリは単なる分類マスタ。所有関係ではない</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">プロジェクト.担当PM</td>
+          <td style="text-align:left;">メンバー</td>
+          <td style="text-align:left;">OFF</td>
+          <td style="text-align:left;">メンバーはプロジェクトに属さない（独立）</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">タスク.担当者</td>
+          <td style="text-align:left;">メンバー</td>
+          <td style="text-align:left;">OFF</td>
+          <td style="text-align:left;">同上</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">コメント.投稿者</td>
+          <td style="text-align:left;">メンバー</td>
+          <td style="text-align:left;">OFF</td>
+          <td style="text-align:left;">同上</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">📌 「Is a part of?」の判断基準</div>
+      <strong>「親が消えたら子も消えるべきか？」</strong> で判断します。
+      <ul>
+        <li>プロジェクトが削除 → そのタスクも消えるべき → ✓ ON</li>
+        <li>タスクが削除 → そのコメントも消えるべき → ✓ ON</li>
+        <li>メンバーが退職 → そのメンバーが担当していたタスクは残すべき → OFF</li>
+      </ul>
+      この判断を間違えると、業務上重要なデータが意図せず削除されたり、逆に削除されるべきデータが残ったりします。
+    </div>
+
+    <h4 class="sub-heading">■ Ref と「Is a part of?」の設定手順</h4>
+
+    <p>タスクテーブルの「プロジェクトID」カラムを例に、設定手順を示します。コメントテーブルの「タスクID」も同じ流れで設定します。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Data → Columns で <strong>タスク</strong> テーブルを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>プロジェクトID</strong> カラムの <strong>Type</strong> を <code>Ref</code> に変更します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右側に表示される設定パネルで <strong>Source table</strong> を <strong>プロジェクト</strong> に指定します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>同じパネル内の <strong>「Is a part of?」</strong> を <strong>ON</strong> に切り替えます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch02-05-01.png" alt="Refと Is a part of? の設定画面">
+      <figcaption>図2-5-1：タスク.プロジェクトIDの Ref 設定（Source table = プロジェクト ／ Is a part of? = ON）</figcaption>
+    </figure>
+
+    <h4 class="sub-heading">■ 自動生成される Related カラム</h4>
+
+    <p>Ref を設定すると、AppSheet は <strong>参照先テーブル側</strong> に <strong>「Related ◯◯」</strong> という Virtual Column を自動生成します。これは「自分の子レコード一覧」を返すリスト型のカラムです。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:160px;">親テーブル</th><th style="width:230px;">自動生成される Virtual Column</th><th>内容</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">プロジェクト</td><td style="text-align:left;"><code>Related タスクs</code></td><td style="text-align:left;">そのプロジェクトに属するタスクの一覧</td></tr>
+        <tr><td style="text-align:left;">タスク</td><td style="text-align:left;"><code>Related コメントs</code></td><td style="text-align:left;">そのタスクに属するコメントの一覧</td></tr>
+        <tr><td style="text-align:left;">メンバー</td><td style="text-align:left;"><code>Related プロジェクトs</code><br><code>Related タスクs</code><br><code>Related コメントs</code></td><td style="text-align:left;">担当しているプロジェクト・タスク・コメントの一覧</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 Related カラムは第4章・第5章で本領を発揮</div>
+      これらの Related カラムを使って、<strong>第4章では進捗率の自動計算</strong>、<strong>第5章では Dashboard View でのタスク表示</strong> などを実現します。今は「自動的に作られている」ことだけ確認しておけば OK です。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 2-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec2-6">
+      <span class="sec-num">2-6</span> 動作確認とまとめ
+    </h3>
+
+    <p>5つのテーブルとリレーションを構築できたら、プレビューで動作確認をします。</p>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>Data → Tables 画面に5つのテーブル（メンバー / カテゴリ / プロジェクト / タスク / コメント）が並んでいる</li>
+      <li>各テーブルの KEY と LABEL が正しく設定されている</li>
+      <li>プロジェクトの「カテゴリID」「担当PM」が Ref で参照先が正しく設定されている</li>
+      <li>タスクの「プロジェクトID」「担当者」が Ref で、プロジェクトID は <strong>Is a part of? = ON</strong> になっている</li>
+      <li>コメントの「タスクID」「投稿者」が Ref で、タスクID は <strong>Is a part of? = ON</strong> になっている</li>
+      <li>プロジェクトの詳細画面（プレビュー）で「Related タスクs」が表示され、そのプロジェクトのタスクが一覧されている</li>
+      <li>タスクの詳細画面で「Related コメントs」が表示され、そのタスクのコメントが一覧されている</li>
+    </ul>
+
+
+    <h4 class="sub-heading">■ 第2章のまとめ</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">やったこと</th><th>ポイント</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">スプレッドシートに5シート準備</td><td style="text-align:left;">マスタ2＋トラン3の構成</td></tr>
+        <tr><td>2</td><td style="text-align:left;">AppSheetに5テーブルを取り込み</td><td style="text-align:left;">+ New Table から順次追加</td></tr>
+        <tr><td>3</td><td style="text-align:left;">各テーブルのカラム型を設定</td><td style="text-align:left;">KEY / LABEL / Type / Enum 値</td></tr>
+        <tr><td>4</td><td style="text-align:left;">Ref を5箇所設定</td><td style="text-align:left;">プロジェクト→2／タスク→2／コメント→2</td></tr>
+        <tr><td>5</td><td style="text-align:left;"><strong>Is a part of? を2箇所で ON</strong></td><td style="text-align:left;">タスク.プロジェクトID／コメント.タスクID</td></tr>
+        <tr><td>6</td><td style="text-align:left;">Related カラムの自動生成を確認</td><td style="text-align:left;">親テーブルに「Related ◯◯」が追加される</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      上級編で最も重要な <strong>3階層リレーション</strong> の土台を構築しました。<strong>Is a part of?</strong> によって、プロジェクト → タスク → コメント の親子関係が AppSheet に明示され、後の章で出てくる進捗率の自動計算・Dashboard・Security Filter のすべてがこの構造の上に成り立ちます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      Save が完了し、プレビューで Related カラムが正しく動作していることを確認してください。リレーションが正しく組まれていないと、第3章以降の全機能に影響します。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter01.html">← 第1章：上級編の概要とアプリ設計</a>
+      <a href="chapter03.html">第3章：メンバー管理と Security Filter →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+<script>
+// TSVデータをクリップボードにコピーする関数
+function copyTSV(btn, textareaId) {
+  var textarea = document.getElementById(textareaId);
+  if (!textarea) return;
+
+  // モダンブラウザ向け Clipboard API
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textarea.value).then(function() {
+      showCopySuccess(btn);
+    }).catch(function() {
+      // フォールバック
+      fallbackCopy(textarea, btn);
+    });
+  } else {
+    fallbackCopy(textarea, btn);
+  }
+}
+
+// フォールバック：execCommand を使う旧来の方法
+function fallbackCopy(textarea, btn) {
+  var originalStyle = textarea.style.cssText;
+  textarea.style.cssText = "position:fixed;top:0;left:0;opacity:0;";
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+  try {
+    document.execCommand('copy');
+    showCopySuccess(btn);
+  } catch (e) {
+    alert('コピーに失敗しました。ブラウザの設定を確認してください。');
+  }
+  textarea.style.cssText = originalStyle;
+}
+
+// コピー成功時のフィードバック表示
+function showCopySuccess(btn) {
+  var originalHTML = btn.innerHTML;
+  btn.innerHTML = '<span class="icon">✓</span>コピーしました';
+  btn.classList.add('copied');
+  setTimeout(function() {
+    btn.innerHTML = originalHTML;
+    btn.classList.remove('copied');
+  }, 2000);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第3章：メンバー管理とSecurity Filter</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー（上級編：ピンク〜赤系） */
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%);
+    border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #c62828; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828;
+  }
+  .section-heading .sec-num {
+    background: #c62828; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #ef5350; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 概念フロー図 */
+  .concept-flow {
+    display: flex; align-items: center; justify-content: center;
+    margin: 28px 0 32px; padding: 28px 16px;
+    background: linear-gradient(135deg, #fdf0f3 0%, #fce4ec 100%);
+    border: 1px solid #f48fb1; border-radius: 12px;
+  }
+  .cf-card {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    flex: 1; min-width: 0; padding: 12px 8px;
+  }
+  .cf-icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,.1); color: #fff; flex-shrink: 0;
+  }
+  .cf-icon.user    { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
+  .cf-icon.email   { background: linear-gradient(135deg, #1976d2, #42a5f5); }
+  .cf-icon.filter  { background: linear-gradient(135deg, #c62828, #ef5350); }
+  .cf-icon.data    { background: linear-gradient(135deg, #27ae60, #2ecc71); }
+  .cf-icon.lock    { background: linear-gradient(135deg, #6d4c41, #8d6e63); }
+  .cf-label { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 4px; }
+  .cf-sub   { font-size: 11px; color: #888; line-height: 1.5; }
+  .cf-arrow { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; padding: 0 6px; }
+  .cf-arrow .arrow-text { font-size: 10px; color: #c62828; font-weight: 700; margin-top: 5px; }
+
+  /* 共通：図 */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #f48fb1; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+
+  /* ロール別動作の比較表 */
+  .role-comparison {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    margin: 24px 0;
+  }
+  .role-comparison .role-col {
+    background: #fff; border: 2px solid #f48fb1; border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .role-comparison .role-col.admin { border-color: #c62828; }
+  .role-comparison .role-col.member { border-color: #1976d2; }
+  .role-comparison .role-col h5 {
+    font-size: 16px; font-weight: 700; margin-bottom: 12px;
+    padding-bottom: 8px; border-bottom: 2px dashed #f48fb1;
+  }
+  .role-comparison .role-col.admin h5 { color: #c62828; border-color: #f48fb1; }
+  .role-comparison .role-col.member h5 { color: #1976d2; border-color: #90caf9; }
+  .role-comparison ul { list-style: none; padding: 0; }
+  .role-comparison li {
+    padding: 6px 0 6px 22px; position: relative; font-size: 13px; line-height: 1.6;
+  }
+  .role-comparison .role-col.admin li::before {
+    content: '✓'; position: absolute; left: 4px; color: #c62828; font-weight: 700;
+  }
+  .role-comparison .role-col.member li::before {
+    content: '◉'; position: absolute; left: 4px; color: #1976d2; font-weight: 700;
+  }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #c62828; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #8e0000; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">上級編</a>
+    <span class="sep">▸</span>
+    <strong>第3章：メンバー管理とSecurity Filter</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">3</div>
+      <h2>メンバー管理とSecurity Filter</h2>
+      <div class="chapter-sub">セキュリティ編 ─ ログインユーザーごとに表示データを自動制御する</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step active"><div class="dot">3</div><div class="label">Security</div></div>
+        <div class="progress-step"><div class="dot">4</div><div class="label">高度関数</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">Dashboard</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式UX</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Slice応用</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec3-1">
+          <span class="toc-num">3-1</span>
+          <span class="toc-text"><strong>Security Filterとは？ ─ アクセス制御の基本</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-2">
+          <span class="toc-num">3-2</span>
+          <span class="toc-text"><strong>USEREMAIL() でログインユーザーを特定</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-3">
+          <span class="toc-num">3-3</span>
+          <span class="toc-text"><strong>UserRoleカラムでロールを動的取得</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-4">
+          <span class="toc-num">3-4</span>
+          <span class="toc-text"><strong>タスクテーブルにSecurity Filterを設定</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-5">
+          <span class="toc-num">3-5</span>
+          <span class="toc-text"><strong>動作確認 ─ アカウント切り替えでテスト</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec3-6">
+          <span class="toc-num">3-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-1 Security Filterとは？ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-1">
+      <span class="sec-num">3-1</span> Security Filterとは？ ─ アクセス制御の基本
+    </h3>
+
+    <p><strong>Security Filter</strong>（セキュリティフィルター）は、<strong>ログインしているユーザーに応じて、テーブルから取得する行を自動的に絞り込む</strong> 仕組みです。中級編で学んだ Slice と似ていますが、決定的な違いがあります。</p>
+
+    <h4 class="sub-heading">■ Slice と Security Filter の違い</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">比較項目</th><th>Slice（中級編）</th><th>Security Filter（上級編）</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;">役割</td><td style="text-align:left;">表示用のサブセット</td><td style="text-align:left;">テーブル全体のアクセス制御</td></tr>
+        <tr><td style="text-align:left;">適用範囲</td><td style="text-align:left;">特定のビューだけ</td><td style="text-align:left;">テーブル全体（全ビュー共通）</td></tr>
+        <tr><td style="text-align:left;">セキュリティ</td><td style="text-align:left;">補助的（迂回可能）</td><td style="text-align:left;"><strong>強い制御</strong>（迂回不可）</td></tr>
+        <tr><td style="text-align:left;">データ読込</td><td style="text-align:left;">全件読み込んでから絞る</td><td style="text-align:left;"><strong>最初から絞って読込</strong>（高速）</td></tr>
+        <tr><td style="text-align:left;">主な用途</td><td style="text-align:left;">「申請中の休暇のみ」など状態別表示</td><td style="text-align:left;">「自分の担当タスクのみ」など権限別表示</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Security Filter の仕組み</h4>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon user">👤</div>
+        <div class="cf-label">ログイン</div>
+        <div class="cf-sub">Google<br>アカウント</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#c62828" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#c62828"/>
+        </svg>
+        <span class="arrow-text">取得</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon email">📧</div>
+        <div class="cf-label">USEREMAIL()</div>
+        <div class="cf-sub">ログイン中の<br>メールアドレス</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#c62828" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#c62828"/>
+        </svg>
+        <span class="arrow-text">条件式</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon filter">🔒</div>
+        <div class="cf-label">Security Filter</div>
+        <div class="cf-sub">行ごとに表示<br>可否を判定</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">結果</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon data">📊</div>
+        <div class="cf-label">表示データ</div>
+        <div class="cf-sub">許可された<br>行だけ表示</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 本章で実現するアクセス制御</h4>
+
+    <div class="role-comparison">
+      <div class="role-col admin">
+        <h5>👔 管理者（PM）</h5>
+        <ul>
+          <li>全プロジェクトが見える</li>
+          <li>全タスクが見える</li>
+          <li>全メンバーの情報が見える</li>
+          <li>全コメントが見える</li>
+          <li>すべての編集が可能</li>
+        </ul>
+      </div>
+      <div class="role-col member">
+        <h5>👤 メンバー</h5>
+        <ul>
+          <li>全プロジェクトの閲覧は可能</li>
+          <li><strong>自分が担当のタスクのみ</strong> 表示</li>
+          <li>自分のタスクのみ編集可能</li>
+          <li>自分のタスクのコメントのみ可</li>
+          <li>メンバーマスタは閲覧のみ</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="point-box">
+      <div class="point-title">📌 ポイント ─ プロジェクトとタスクで挙動を変える</div>
+      上級編では「全員が見るべきもの（プロジェクト）」と「自分のものだけ見るべきもの（タスク）」を切り分けます。これにより、メンバーは <strong>会社全体の動き</strong> を把握しながら、<strong>自分の業務に集中</strong> できる、現実的な業務アプリになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-2 USEREMAIL() でログインユーザーを特定 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-2">
+      <span class="sec-num">3-2</span> USEREMAIL() でログインユーザーを特定
+    </h3>
+
+    <p>Security Filter の中心となる関数が <strong><code>USEREMAIL()</code></strong> です。これは、<strong>現在アプリにログインしている Google アカウントのメールアドレス</strong> を返します。</p>
+
+    <h4 class="sub-heading">■ USEREMAIL() の動作</h4>
+
+<pre><code>USEREMAIL()
+↓
+"yamada@example.com"  ← ログインユーザーのアドレス</code></pre>
+
+    <p>たとえば、山田太郎さん（M001）でログインしているときに <code>USEREMAIL()</code> を呼び出すと <code>"yamada@example.com"</code> が返ります。佐藤花子さん（M002）でログインしていれば <code>"sato@example.com"</code> が返ります。</p>
+
+    <h4 class="sub-heading">■ メンバーマスタとの照合</h4>
+
+    <p>第2章で作成した <strong>メンバー</strong> テーブルには、各メンバーのメールアドレスが登録されています。<code>USEREMAIL()</code> が返したアドレスを、このテーブルの <strong>「メールアドレス」</strong> カラムと照合することで、<strong>ログインしているのが誰か</strong> を特定できます。</p>
+
+    <div class="concept-flow">
+      <div class="cf-card">
+        <div class="cf-icon email">📧</div>
+        <div class="cf-label">USEREMAIL()</div>
+        <div class="cf-sub">"yamada@<br>example.com"</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#c62828" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#c62828"/>
+        </svg>
+        <span class="arrow-text">照合</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon user">📋</div>
+        <div class="cf-label">メンバーマスタ</div>
+        <div class="cf-sub">メールアドレス<br>カラム</div>
+      </div>
+      <div class="cf-arrow">
+        <svg width="50" height="20" viewBox="0 0 50 20">
+          <line x1="0" y1="10" x2="38" y2="10" stroke="#27ae60" stroke-width="3"/>
+          <polygon points="38,4 50,10 38,16" fill="#27ae60"/>
+        </svg>
+        <span class="arrow-text" style="color:#27ae60;">特定</span>
+      </div>
+      <div class="cf-card">
+        <div class="cf-icon lock">🆔</div>
+        <div class="cf-label">メンバー特定</div>
+        <div class="cf-sub">M001 山田太郎<br>ロール = 管理者</div>
+      </div>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-3 UserRoleカラムでロールを動的取得 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-3">
+      <span class="sec-num">3-3</span> UserRoleカラムでロールを動的取得
+    </h3>
+
+    <p>毎回 Security Filter の式の中で <code>USEREMAIL()</code> とメンバーマスタを照合するのは大変です。そこで、<strong>「ログイン中のユーザーのロール」を1つのカラムにまとめておく</strong> 設計が便利です。これを <strong>UserRole カラム</strong> と呼びます。</p>
+
+    <h4 class="sub-heading">■ メンバーテーブルに UserRole 用 Virtual Column を追加</h4>
+
+    <p>メンバーテーブルに、次の Virtual Column を追加します。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:180px;">カラム名</th><th style="width:130px;">Type</th><th>App formula</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="text-align:left;"><strong>IsCurrentUser</strong></td>
+          <td>Yes/No</td>
+          <td style="text-align:left;"><code>[メールアドレス] = USEREMAIL()</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>この Virtual Column は、各行ごとに「この行のメンバーが、今ログインしている人と同じか？」を <strong>TRUE / FALSE</strong> で返します。当然、TRUE になる行は1つだけ（自分自身の行）です。</p>
+
+    <h4 class="sub-heading">■ さらに便利な「ログイン中のユーザーレコード」を取得する式</h4>
+
+    <p>Security Filter で実際に使う式は次のとおりです。これは、メンバーテーブルから <strong>ログインユーザーの行を1件だけ取得し、そのロールを返す</strong> 式です。</p>
+
+<pre><code>ANY(
+  SELECT(
+    メンバー[ロール],
+    [メールアドレス] = USEREMAIL()
+  )
+)</code></pre>
+
+    <h4 class="sub-heading">■ 式の解説</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">関数</th><th>役割</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><code>SELECT(...)</code></td><td style="text-align:left;">指定した条件に合う行のリストを取得（中級編で学習）</td></tr>
+        <tr><td style="text-align:left;"><code>メンバー[ロール]</code></td><td style="text-align:left;">メンバーテーブルから「ロール」カラムを取り出す</td></tr>
+        <tr><td style="text-align:left;"><code>[メールアドレス] = USEREMAIL()</code></td><td style="text-align:left;">行のメールアドレスがログインユーザーと一致する条件</td></tr>
+        <tr><td style="text-align:left;"><code>ANY(...)</code></td><td style="text-align:left;">リストから1件取り出す（リスト → 単一値の変換）</td></tr>
+      </tbody>
+    </table>
+
+    <p>この式全体で、たとえば山田太郎（M001）でログインしているときは <code>"管理者"</code> を返し、佐藤花子（M002）でログインしているときは <code>"メンバー"</code> を返します。</p>
+
+    <div class="point-box">
+      <div class="point-title">📌 ポイント ─ ANY() で「リスト → 単一値」</div>
+      <code>SELECT()</code> は常にリスト型を返すため、そのまま条件式に使えません。<code>ANY()</code> でリストから1件だけ取り出すことで、文字列として比較できるようになります。これは上級編で頻出するパターンです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-4 タスクテーブルにSecurity Filterを設定 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-4">
+      <span class="sec-num">3-4</span> タスクテーブルにSecurity Filterを設定
+    </h3>
+
+    <p>いよいよ Security Filter を設定します。今回は <strong>タスクテーブル</strong> に対して、以下のルールを実装します。</p>
+
+    <ul style="list-style:none; margin: 8px 0 24px 0; padding: 0;">
+      <li style="padding:8px 0 8px 28px; position:relative; background:#fdf0f3; margin-bottom:6px; border-radius:6px; padding-left:32px;">
+        <span style="position:absolute; left:10px; color:#c62828; font-weight:700;">①</span>
+        <strong>ロールが「管理者」のユーザー</strong> → 全タスクを表示
+      </li>
+      <li style="padding:8px 0 8px 28px; position:relative; background:#fdf0f3; border-radius:6px; padding-left:32px;">
+        <span style="position:absolute; left:10px; color:#c62828; font-weight:700;">②</span>
+        <strong>ロールが「メンバー」のユーザー</strong> → 自分が担当者のタスクのみ表示
+      </li>
+    </ul>
+
+    <h4 class="sub-heading">■ Security Filter の式</h4>
+
+<pre><code>OR(
+  ANY(SELECT(メンバー[ロール], [メールアドレス] = USEREMAIL())) = "管理者",
+  [担当者].[メールアドレス] = USEREMAIL()
+)</code></pre>
+
+    <h4 class="sub-heading">■ 式の解説</h4>
+
+    <p>この式は <strong>OR で2つの条件</strong> を組み合わせています。どちらかの条件が TRUE なら、その行が表示されます。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:300px;">条件</th><th>意味</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>①</td>
+          <td style="text-align:left;"><code>ANY(SELECT(メンバー[ロール], [メールアドレス] = USEREMAIL())) = "管理者"</code></td>
+          <td style="text-align:left;">ログインユーザーが管理者なら、無条件に TRUE（全件表示）</td>
+        </tr>
+        <tr>
+          <td>②</td>
+          <td style="text-align:left;"><code>[担当者].[メールアドレス] = USEREMAIL()</code></td>
+          <td style="text-align:left;">タスクの担当者が、ログインユーザー本人なら TRUE</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>条件②の <code>[担当者].[メールアドレス]</code> は、タスクの「担当者」Ref から、メンバーマスタの「メールアドレス」カラムを参照しています。これも中級編で学んだ <strong>Ref を通じた別テーブル参照</strong> です。</p>
+
+    <h4 class="sub-heading">■ 設定手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>🛡 Security アイコン</strong>（盾型アイコン）をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>サブメニューから <strong>「Security Filters」</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>右側パネルにテーブル一覧が表示されます。<strong>タスク</strong> テーブルを選択（クリックで展開）します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>「Security filter」</strong> 欄に、上記の OR 式をそのまま入力します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ Security メニューの構成</div>
+      左メニューの <strong>🛡 Security</strong> には次の4つのサブメニューがあります。本章で扱うのは <strong>Security Filters</strong> ですが、他のメニューも今後使う重要な設定です。
+      <ul style="margin: 6px 0 0 20px;">
+        <li><strong>Require sign-in</strong> ─ アプリ利用時のサインイン強制（オン推奨）</li>
+        <li><strong>Security Filters</strong> ─ 行レベルのアクセス制御（本章で使用）</li>
+        <li><strong>Domain Authentication</strong> ─ 特定ドメインのユーザーのみ許可</li>
+        <li><strong>Options</strong> ─ その他のセキュリティオプション</li>
+      </ul>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 事前に「Require user sign-in」をオンにする</div>
+      Security Filter は <strong>ログインユーザーを特定できないと機能しません</strong>。Security → <strong>Require sign-in</strong> 画面で <strong>「Require user sign-in」</strong> がオンになっていることを確認してください。オフだと <code>USEREMAIL()</code> が空文字を返してしまい、Security Filter が正しく動作しません。
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-04-01.png" alt="Security Filterの設定画面">
+      <figcaption>図3-4-1：タスクテーブルの Security フィルター設定</figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ Security Filter は「行の表示制御」のみ</div>
+      Security Filter は <strong>行を非表示にする</strong> 機能で、「カラムを隠す」「編集を禁止する」といった制御はできません。それらは別途、ビュー設定や Action の条件式で行います。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 3-5 動作確認 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-5">
+      <span class="sec-num">3-5</span> 動作確認 ─ アカウント切り替えでテスト
+    </h3>
+
+    <p>Security Filter は <strong>ログインユーザーによって動作が変わる</strong> ため、テストには工夫が必要です。プロトタイプ状態（無料プラン）でも、次の2つの方法で動作確認できます。</p>
+
+    <h4 class="sub-heading">■ 事前準備:タスク一覧ビューを作成</h4>
+
+    <p>Security Filter の動作確認をするには、まず <strong>タスク一覧を表示するビュー</strong> が必要です。第2章でテーブルを取り込んだ時点では、AppSheet が自動生成したビュー(メンバー一覧など)だけが存在する状態のため、ここでタスク用のビューを手動で追加します。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>📱 Views アイコン</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>PRIMARY NAVIGATION の <strong>「+ Add View」</strong> または <strong>「+」</strong> ボタンをクリックし、<strong>Create a new view</strong> を選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>次の通り設定します。</p>
+          <p>・<strong>View name</strong>:<code>タスク一覧</code></p>
+          <p>・<strong>For this data</strong>:<code>タスク</code></p>
+          <p>・<strong>View type</strong>:<code>table</code></p>
+          <p>・<strong>Position</strong>:<code>menu</code>(下部メニューに表示)</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>View Options</strong> セクションを展開し、<strong>Sort by</strong> で <strong>期限</strong> を <strong>Ascending</strong>(昇順)に設定します。これで期限が近いタスクが上に表示されます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Column order</strong> セクションで、表示する順番にカラムを追加します。おすすめの順番:</p>
+          <p><code>タスクID → タスク名 → プロジェクトID → 担当者 → 優先度 → ステータス → 期限 → 期限ステータス</code></p>
+          <p>(期限ステータスは第4章で作成する Virtual Column です。本章では未作成なので、リストに含めないでOKです)</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。プレビュー画面の下部メニューに <strong>「タスク一覧」</strong> アイコンが追加されているはずです。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch03-05-00.png" alt="タスク一覧ビューの設定画面">
+      <figcaption>図3-5-0:タスク一覧ビュー(Table View)の設定</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 他にも作っておくと便利なビュー</div>
+      動作確認だけなら「タスク一覧」だけで十分ですが、本格的に運用する際は次のビューも作っておくと便利です(第5章で詳しく扱います)。
+      <ul style="margin: 6px 0 0 20px;">
+        <li><strong>プロジェクト一覧</strong>(table view / プロジェクトテーブル)</li>
+        <li><strong>マイタスク</strong>(table view / マイタスク Slice)</li>
+        <li><strong>管理者ダッシュボード</strong>(dashboard view)</li>
+      </ul>
+    </div>
+
+    <h4 class="sub-heading">■ 方法1:Security Filter の式を一時的に書き換える(推奨)</h4>
+
+    <p>最も手軽な動作確認方法は、<strong>Security Filter の式の中の <code>USEREMAIL()</code> を、テストしたいメールアドレスに一時的に書き換える</strong> ことです。これにより、特定のメンバーになりすました状態で動作を検証できます。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>🛡 Security → Security Filters</strong> を開き、<strong>タスク</strong> テーブルを選択します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>Security filter 欄の式の中で、<strong>2箇所ある <code>USEREMAIL()</code> の両方を</strong> 同じアドレスに書き換えます。たとえば佐藤花子さんになりすますなら、以下のように書き換えます。</p>
+<pre><code>OR(
+  ANY(SELECT(メンバー[ロール], [メールアドレス] = "sato@example.com")) = "管理者",
+  [担当者].[メールアドレス] = "sato@example.com"
+)</code></pre>
+          <p style="margin-top:8px; padding:10px 14px; background:#fefce8; border-left:3px solid #f9a825; border-radius:0 6px 6px 0; font-size:13px;">⚠️ <strong>必ず2箇所両方を同じアドレスに置き換えてください。</strong>片方だけだと判定が正しく動作せず、想定した行が表示されません(管理者の動作確認なのに0件、など)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリックして保存し、プレビュー画面の <strong>Sync(🔄)</strong> を押します。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>タスク一覧を開くと、<strong>佐藤さんが担当しているタスクのみ</strong>(T001 / T002 / T009)が表示されているはずです。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>他のメンバーでもテストしたい場合は、アドレスを書き換えて Save → Sync を繰り返します。<strong>動作確認が終わったら、必ず <code>USEREMAIL()</code> に戻して</strong> Save してください。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 必ず本番用の式に戻すこと</div>
+      テストが終わったら、<strong>必ず <code>"sato@example.com"</code> などのテスト用アドレスを <code>USEREMAIL()</code> に戻して</strong> Save してください。テスト用の式のまま本番運用すると、誰がログインしても佐藤さんのデータしか見えなくなり、業務が止まります。
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 旧UIにあった「Run as a different user」について</div>
+      以前の AppSheet には、プレビュー画面のユーザーアイコンから別ユーザーになりすませる <strong>「Run as a different user」</strong> という機能がありました。現在のUI(2025年以降)では、この機能は <strong>プレビュー画面からは削除</strong> されています。代わりに、本節の <strong>方法1(式を書き換える)</strong> または <strong>方法2(実アカウントでログイン)</strong> でテストする形になっています。
+    </div>
+
+    <h4 class="sub-heading">■ 方法2：実際の Google アカウント切り替え</h4>
+
+    <p>本番に近い動作を確認したい場合は、実際に <strong>異なる Google アカウント</strong> でアプリにログインしてテストします。</p>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>事前にテスト用の Google アカウントを準備し、そのアドレスを <strong>メンバーシートに追加</strong> しておきます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>シークレットモード（プライベートブラウジング）</strong> で AppSheet にアクセスし、テスト用アカウントでログインします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>アプリを開いてタスク一覧を確認します。そのアカウントが担当しているタスクだけが表示されることを確認します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 期待される動作</h4>
+
+    <p>以下の6パターンで <code>USEREMAIL()</code> の部分(2箇所両方)を書き換えてテストし、想定通りの結果になるか確認します。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:170px;">ログインユーザー</th>
+          <th style="width:90px;">ロール</th>
+          <th>表示されるタスク</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#fce4ec;">
+          <td style="text-align:left;">yamada@example.com</td>
+          <td style="font-weight:700; color:#c62828;">管理者</td>
+          <td style="text-align:left;">全12件のタスク</td>
+        </tr>
+        <tr style="background:#fce4ec;">
+          <td style="text-align:left;">tanaka@example.com</td>
+          <td style="font-weight:700; color:#c62828;">管理者</td>
+          <td style="text-align:left;">全12件のタスク</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">sato@example.com</td>
+          <td>メンバー</td>
+          <td style="text-align:left;">T001 / T002 / T009（3件 ─ 担当者がM002のもの）</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">suzuki@example.com</td>
+          <td>メンバー</td>
+          <td style="text-align:left;">T005 / T007 / T010 / T011（4件 ─ 担当者がM003のもの）</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">ito@example.com</td>
+          <td>メンバー</td>
+          <td style="text-align:left;">T003 / T004 / T012（3件 ─ 担当者がM005のもの）</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">takahashi@example.com</td>
+          <td>メンバー</td>
+          <td style="text-align:left;">T008（1件 ─ 担当者がM006のもの）</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+
+    <!-- ============================================================ -->
+    <!-- 3-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec3-6">
+      <span class="sec-num">3-6</span> 動作確認とまとめ
+    </h3>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>メンバーテーブルに <strong>IsCurrentUser</strong>（Virtual Column）が追加されている</li>
+      <li><strong>タスク一覧</strong> ビュー（Table View）が作成され、下部メニューに表示されている</li>
+      <li>タスクテーブルの <strong>Security フィルター</strong> に OR 式が設定されている</li>
+      <li>Security Filter の式の USEREMAIL() を管理者アドレス（yamada@example.com / tanaka@example.com）に書き換えると、タスク一覧に全12件のタスクが表示される</li>
+      <li>メンバーユーザー（sato）に切り替えると、自分担当のタスク（T001 / T002 / T009）のみ表示される</li>
+      <li>メンバーユーザー（suzuki）に切り替えると、担当タスク（T005 / T007 / T010 / T011）のみ表示される</li>
+      <li>プロジェクトテーブルとコメントテーブルには Security Filter が設定されていない（全員が閲覧可能）</li>
+    </ul>
+
+    <h4 class="sub-heading">■ プレビューで確認</h4>
+
+    <div class="preview-grid">
+      <figure class="preview-figure">
+        <img src="images/ch03-06-01.png" alt="管理者ログイン時のタスク一覧">
+        <figcaption>図3-6-1：管理者ログイン ─ 全12件のタスクが表示される</figcaption>
+      </figure>
+      <figure class="preview-figure">
+        <img src="images/ch03-06-02.png" alt="メンバーログイン時のタスク一覧">
+        <figcaption>図3-6-2：メンバーログイン ─ 自分の担当のみ表示される</figcaption>
+      </figure>
+    </div>
+
+    <h4 class="sub-heading">■ 第3章のまとめ（中級編との違い）</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">上級編で新しく扱ったポイント</th><th>使った仕組み</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">ログインユーザーの取得</td><td><code>USEREMAIL()</code> 関数</td></tr>
+        <tr><td>2</td><td style="text-align:left;">ロールの動的取得</td><td><code>ANY(SELECT(...))</code> でリスト→単一値</td></tr>
+        <tr><td>3</td><td style="text-align:left;">テーブル全体の表示制御</td><td>Security フィルター（Slice より強力）</td></tr>
+        <tr><td>4</td><td style="text-align:left;">複数条件の組み合わせ</td><td>OR() で「管理者は全件／メンバーは自分のみ」</td></tr>
+        <tr><td>5</td><td style="text-align:left;">ユーザー切り替えテスト</td><td>Security Filter の式を一時的に書き換え／シークレットモードで別アカウントログイン</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      上級編のキーである <strong>Security Filter</strong> を使い、ロールベースのアクセス制御を実装しました。<code>USEREMAIL()</code> でログインユーザーを特定し、メンバーマスタと照合することで、<strong>管理者は全件・メンバーは自分の担当のみ</strong> という動的なデータ表示を実現しました。次の第4章では、<strong>SELECT / FILTER / COUNT</strong> などの高度な関数を駆使して、<strong>プロジェクトの進捗率を自動計算</strong> する仕組みを作ります。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      Security Filter の動作が確認できたら、必ず Save してから第4章に進んでください。第4章で作る Virtual Column は、本章で設定したアクセス制御を前提とした計算式を含みます。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter02.html">← 第2章：複合リレーションの構築</a>
+      <a href="chapter04.html">第4章：高度な関数と Virtual Column →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新：2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

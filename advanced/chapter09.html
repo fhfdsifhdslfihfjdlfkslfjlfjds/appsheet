@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第9章:全体まとめと今後の展望</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9; }
+  .page-wrapper { max-width: 960px; margin: 0 auto; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh; }
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+  .content { padding: 36px 40px 60px; }
+  .chapter-title-block { background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%); border: 1px solid #f48fb1; border-radius: 10px; padding: 32px 36px; margin-bottom: 40px; text-align: center; }
+  .chapter-number { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #c62828; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before { content: ''; position: absolute; top: 16px; left: 24px; right: 24px; height: 3px; background: #d4dce8; z-index: 0; }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #d4dce8; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a { display: flex; align-items: center; padding: 14px 12px; text-decoration: none; color: #333; transition: background .15s; border-radius: 6px; }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #c62828; color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0; }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+  .section-heading { font-size: 21px; color: #c62828; font-weight: 700; margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828; }
+  .section-heading .sec-num { background: #c62828; color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; font-size: 15px; font-weight: 700; margin-right: 10px; vertical-align: middle; }
+  .sub-heading { font-size: 17px; color: #ef5350; font-weight: 700; margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350; }
+  .content p { margin-bottom: 16px; }
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre { background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .note-box { border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box { border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box { border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+  /* Q&Aカード */
+  .qa-card { background: #fff; border: 1px solid #f48fb1; border-radius: 10px; padding: 20px 24px; margin: 18px 0; }
+  .qa-q { font-weight: 700; color: #c62828; font-size: 15px; margin-bottom: 10px; padding-left: 32px; position: relative; }
+  .qa-q::before { content: 'Q'; position: absolute; left: 0; top: -2px; background: #c62828; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .qa-a { padding-left: 32px; position: relative; font-size: 14px; line-height: 1.8; }
+  .qa-a::before { content: 'A'; position: absolute; left: 0; top: 0; background: #43a047; color: #fff; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  /* 横展開カード */
+  .expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 20px 0; }
+  .expand-card { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px; padding: 18px 20px; }
+  .expand-card .expand-icon { font-size: 28px; margin-bottom: 8px; }
+  .expand-card .expand-name { font-weight: 700; color: #c62828; font-size: 15px; margin-bottom: 6px; }
+  .expand-card .expand-desc { font-size: 12px; color: #666; line-height: 1.6; }
+  /* 完了ボックス */
+  .completion-box { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; border-radius: 14px; padding: 36px 40px; margin: 40px 0; text-align: center; }
+  .completion-box .comp-icon { font-size: 48px; margin-bottom: 12px; }
+  .completion-box h3 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+  .completion-box p { font-size: 15px; opacity: .95; line-height: 1.8; }
+  .page-nav { display: flex; justify-content: space-between; margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef; }
+  .page-nav a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #c62828; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; transition: background .15s; }
+  .page-nav a:hover { background: #8e0000; }
+  .site-footer { background: #f4f6f9; text-align: center; padding: 20px; font-size: 12px; color: #999; border-top: 1px solid #e0e6ef; }
+  @media print { body { background: #fff; } .page-wrapper { box-shadow: none; } .page-nav, .progress-bar-wrapper { display: none; } }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a><span class="sep">▸</span><a href="../index.html">上級編</a><span class="sep">▸</span><strong>第9章:全体まとめと今後の展望</strong>
+  </nav>
+  <main class="content">
+    <div class="chapter-title-block">
+      <div class="chapter-number">9</div>
+      <h2>全体まとめと今後の展望</h2>
+      <div class="chapter-sub">総まとめ ─ 上級編の学びを振り返り、次のステップへ</div>
+    </div>
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Security</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">高度関数</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Dashboard</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">書式UX</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Slice応用</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">運用設計</div></div>
+        <div class="progress-step active"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec9-1"><span class="toc-num">9-1</span><span class="toc-text"><strong>上級編の全体振り返り</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec9-2"><span class="toc-num">9-2</span><span class="toc-text"><strong>よくあるトラブルと解決策(Q&A)</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec9-3"><span class="toc-num">9-3</span><span class="toc-text"><strong>横展開アイデア ─ 他業務への応用</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec9-4"><span class="toc-num">9-4</span><span class="toc-text"><strong>さらなるステップアップ</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec9-5"><span class="toc-num">9-5</span><span class="toc-text"><strong>学習リソース</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec9-6"><span class="toc-num">9-6</span><span class="toc-text"><strong>おわりに</strong></span><span class="toc-arrow">▸</span></a></li>
+      </ul>
+    </div>
+
+    <!-- 9-1 -->
+    <h3 class="section-heading" id="sec9-1"><span class="sec-num">9-1</span> 上級編の全体振り返り</h3>
+    <p>上級編全9章で、<strong>5テーブル・2ロールのプロジェクト管理アプリ</strong>を構築しました。初級編・中級編からの成長を振り返ります。</p>
+
+    <h4 class="sub-heading">■ 各章で学んだことの一覧</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:50px;">章</th><th style="width:220px;">テーマ</th><th>身についたスキル</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">概要とアプリ設計</td><td style="text-align:left;">5テーブル構成の設計、ロールベースのアクセス制御の考え方</td></tr>
+        <tr><td>2</td><td style="text-align:left;">複合リレーションの構築</td><td style="text-align:left;">Ref / Is a part of? / Related カラムの連携</td></tr>
+        <tr><td>3</td><td style="text-align:left;">Security Filter</td><td style="text-align:left;">USEREMAIL() によるログインユーザー特定、行レベルアクセス制御</td></tr>
+        <tr><td>4</td><td style="text-align:left;">高度な関数と Virtual Column</td><td style="text-align:left;">SELECT / COUNT でテーブルをまたいだ集計、[_THISROW] の活用</td></tr>
+        <tr><td>5</td><td style="text-align:left;">Dashboard View</td><td style="text-align:left;">Chart View (aggregate piechart / col series)、Dashboard で複数ビュー統合</td></tr>
+        <tr><td>6</td><td style="text-align:left;">条件付き書式とUX</td><td style="text-align:left;">Format Rule の複合条件、色彩設計のセオリー、ブランディング</td></tr>
+        <tr><td>7</td><td style="text-align:left;">Slice の応用</td><td style="text-align:left;">USEREMAIL() / Virtual Column を条件にした動的フィルタ</td></tr>
+        <tr><td>8</td><td style="text-align:left;">運用設計</td><td style="text-align:left;">Sync設定、データ量管理、命名規則、変更管理とバックアップ</td></tr>
+        <tr><td>9</td><td style="text-align:left;">総まとめ</td><td style="text-align:left;">全体の振り返りと今後の展望</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 初級→中級→上級で何が変わったか</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:100px;">レベル</th><th style="width:130px;">テーブル数</th><th style="width:180px;">主な機能</th><th>アプリの複雑度</th></tr></thead>
+      <tbody>
+        <tr><td>初級編</td><td>1テーブル</td><td style="text-align:left;">CRUD / ビュー基本</td><td style="text-align:left;">個人用の簡単なデータ管理</td></tr>
+        <tr><td>中級編</td><td>3テーブル</td><td style="text-align:left;">Ref / Slice / Bot / Action</td><td style="text-align:left;">部署内で使える申請管理</td></tr>
+        <tr style="background:#fce4ec;"><td><strong>上級編</strong></td><td><strong>5テーブル</strong></td><td style="text-align:left;"><strong>Security / Dashboard / Chart / 運用設計</strong></td><td style="text-align:left;"><strong>全社で運用するプロジェクト管理</strong></td></tr>
+      </tbody>
+    </table>
+
+    <!-- 9-2 -->
+    <h3 class="section-heading" id="sec9-2"><span class="sec-num">9-2</span> よくあるトラブルと解決策(Q&A)</h3>
+    <p>上級編のアプリ構築で遭遇しやすいトラブルをQ&A形式でまとめます。困ったときのリファレンスとしてご活用ください。</p>
+
+    <div class="qa-card">
+      <div class="qa-q">Date型同士の引き算が Number にならない</div>
+      <div class="qa-a"><code>[期限] - TODAY()</code> の結果は <strong>Duration型</strong> になります。Number型で日数を取得するには <code>HOUR([期限] - TODAY()) / 24</code> のように、<strong>HOUR() で時間に変換してから 24 で割る</strong> 必要があります。(第4章)</div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">ROUND() で小数桁数を指定するとエラーになる</div>
+      <div class="qa-a">AppSheet の <code>ROUND()</code> は <strong>引数1つだけ</strong>(整数への丸め)です。Excel のように <code>ROUND(x, 3)</code> とは書けません。代わりに <code>ROUND(x * 1000) / 1000</code> のように「掛けて→丸めて→割る」手法を使います。(第4章)</div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">Number型同士の割り算が 0 になる</div>
+      <div class="qa-a">AppSheet は <strong>整数同士の割り算の結果も整数に切り捨てる</strong> 仕様があります。<code>1 / 5 = 0</code> になります。本マニュアルでは <strong>先に * 100 してから割る</strong> 方法で回避しています(<code>([完了タスク数] * 100) / [タスク数]</code>)。(第4章)</div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">Security Filterを設定したのにタスクが全件表示されない(0件になる)</div>
+      <div class="qa-a"><code>USEREMAIL()</code> をテスト用アドレスに書き換える際、<strong>式の中の2箇所を両方とも書き換える</strong> 必要があります。片方だけ書き換えると、条件判定が正しく動作しません。テスト後は必ず <code>USEREMAIL()</code> に戻してください。(第3章)</div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">Format Rule を設定したらテキストが消えた</div>
+      <div class="qa-a"><strong>Text color を白(#ffffff)に設定すると、背景色がない部分でテキストが見えなくなります</strong>。Text color には <strong>赤やオレンジなど白以外の色</strong> を使ってください。Icon を設定した場合は、対象カラムの値がアイコンに置き換わります。(第6章)</div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">Chart View でステータスが Chart columns に表示されない</div>
+      <div class="qa-a">Chart type が <code>piechart</code>(通常)だと、Chart columns に数値カラムしか選べません。カテゴリ別の件数集計をしたい場合は、Chart type を <strong><code>aggregate piechart</code></strong>(集計付き円グラフ)に変更してください。(第5章)</div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">Slice の作成場所が分からない</div>
+      <div class="qa-a">現在の AppSheet では、<strong>Data → テーブル名の右に表示される「+」アイコン → 「Create a new slice for テーブル名」ボタン</strong> から作成します。以前あった「Data → Slices」メニューは現在のUIには存在しません。(第5章・第7章)</div>
+    </div>
+
+    <!-- 9-3 -->
+    <h3 class="section-heading" id="sec9-3"><span class="sec-num">9-3</span> 横展開アイデア ─ 他業務への応用</h3>
+    <p>上級編で学んだスキル(Security Filter / Dashboard / Slice / Format Rule / 運用設計)は、プロジェクト管理以外の業務アプリにも応用できます。ここでは横展開のアイデアを紹介します。</p>
+
+    <div class="expand-grid">
+      <div class="expand-card">
+        <div class="expand-icon">💼</div>
+        <div class="expand-name">営業案件管理</div>
+        <div class="expand-desc">テーブル: 顧客 / 案件 / 商談履歴 / 担当者<br>Security Filter で営業担当ごとの案件を制限。Dashboard で売上パイプラインを可視化。</div>
+      </div>
+      <div class="expand-card">
+        <div class="expand-icon">👥</div>
+        <div class="expand-name">採用管理</div>
+        <div class="expand-desc">テーブル: 候補者 / 選考 / 面接官 / ポジション<br>Slice で「今週の面接予定」を抽出。Format Rule で選考ステータス別に色分け。</div>
+      </div>
+      <div class="expand-card">
+        <div class="expand-icon">📞</div>
+        <div class="expand-name">問い合わせ管理</div>
+        <div class="expand-desc">テーブル: 問い合わせ / 顧客 / 担当者 / 対応履歴<br>Security Filter でサポート担当ごとの案件を制限。期限超過Sliceで未回答を管理。</div>
+      </div>
+      <div class="expand-card">
+        <div class="expand-icon">📚</div>
+        <div class="expand-name">教育研修管理</div>
+        <div class="expand-desc">テーブル: 研修 / 受講者 / 講師 / 出席記録<br>Chart View で受講率をグラフ化。Slice で「自分の研修一覧」を表示。</div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 横展開のコツ</div>
+      <ul style="margin: 4px 0 0 20px;">
+        <li>まず <strong>テーブル構成(ER図)</strong> を紙に書いてから AppSheet に取りかかる</li>
+        <li><strong>Ref(親子関係)</strong> を先に設計すると、Related カラムや集計が自然と使える</li>
+        <li>上級編のプロジェクト管理アプリを <strong>テンプレートとしてコピー</strong> し、テーブル名とカラムを差し替えるのが最も効率的</li>
+      </ul>
+    </div>
+
+    <!-- 9-4 -->
+    <h3 class="section-heading" id="sec9-4"><span class="sec-num">9-4</span> さらなるステップアップ</h3>
+    <p>上級編を修了したあなたが、次に挑戦できるテーマを紹介します。</p>
+
+    <table class="data-table left-align">
+      <thead><tr><th style="width:50px;">No.</th><th style="width:200px;">テーマ</th><th>概要</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">Automation(Bot)</td><td style="text-align:left;">条件に応じた自動メール送信、ステータス変更時の通知。中級編の Bot をさらに発展</td></tr>
+        <tr><td>2</td><td style="text-align:left;">Action の応用</td><td style="text-align:left;">ボタン1つでステータス変更+完了日自動入力+通知の一括実行</td></tr>
+        <tr><td>3</td><td style="text-align:left;">Webhook / API連携</td><td style="text-align:left;">AppSheet から外部サービス(Slack / Teams / LINE)に通知を送信</td></tr>
+        <tr><td>4</td><td style="text-align:left;">OCR / 画像取込</td><td style="text-align:left;">スマホカメラで撮影した名刺や領収書を自動テキスト化</td></tr>
+        <tr><td>5</td><td style="text-align:left;">BigQuery連携</td><td style="text-align:left;">大量データ(数万行以上)を扱うためのデータソース変更</td></tr>
+        <tr><td>6</td><td style="text-align:left;">Google Workspace 連携</td><td style="text-align:left;">Gmail / Calendar / Drive との統合で業務フローをさらに自動化</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 9-5 -->
+    <h3 class="section-heading" id="sec9-5"><span class="sec-num">9-5</span> 学習リソース</h3>
+    <p>AppSheet の学習をさらに深めたい方向けに、おすすめのリソースを紹介します。</p>
+
+    <table class="data-table left-align">
+      <thead><tr><th style="width:210px;">リソース名</th><th style="width:90px;">種類</th><th>URL / 備考</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">AppSheet 公式ドキュメント</td><td>ドキュメント</td><td style="text-align:left;">support.google.com/appsheet ─ 全機能の公式リファレンス</td></tr>
+        <tr><td style="text-align:left;">AppSheet Community</td><td>フォーラム</td><td style="text-align:left;">community.appsheet.com ─ 質問・回答・テンプレート共有の場</td></tr>
+        <tr><td style="text-align:left;">AppSheet YouTube</td><td>動画</td><td style="text-align:left;">YouTube で「AppSheet tutorial」で検索 ─ 公式 / 非公式の動画多数</td></tr>
+        <tr><td style="text-align:left;">AppSheet テンプレート</td><td>テンプレート</td><td style="text-align:left;">AppSheet エディタの「Start with a sample app」から閲覧可能</td></tr>
+        <tr><td style="text-align:left;">Google Workspace ラーニング</td><td>Eラーニング</td><td style="text-align:left;">cloud.google.com/appsheet/training ─ Google 公式トレーニング</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 9-6 -->
+    <h3 class="section-heading" id="sec9-6"><span class="sec-num">9-6</span> おわりに</h3>
+
+    <div class="completion-box">
+      <div class="comp-icon">🎉</div>
+      <h3>上級編 全9章 修了おめでとうございます！</h3>
+      <p>初級編・中級編・上級編のすべてを修了したあなたは、<br>AppSheet で<strong>本格的な業務アプリを設計・構築・運用できるスキル</strong>を身につけました。</p>
+    </div>
+
+    <p>上級編では、5テーブル構成のプロジェクト管理アプリを通して、<strong>Security Filter によるアクセス制御</strong>、<strong>Virtual Column と SELECT/COUNT による集計</strong>、<strong>Dashboard View による可視化</strong>、<strong>Format Rule による UX 改善</strong>、そして<strong>運用設計とパフォーマンス最適化</strong>まで、業務アプリに必要なスキルを一通り網羅しました。</p>
+
+    <p>AppSheet は「ノーコード」ですが、上級編で扱ったようなテーブル設計、関数の組み合わせ、アクセス制御の考え方は、プログラミングの世界でも通用する<strong>アプリケーション設計の基本スキル</strong>です。このマニュアルで身につけた「設計 → 実装 → テスト → 運用」のサイクルは、どんな開発ツールでも活かせます。</p>
+
+    <p>ぜひ、ここで学んだスキルを <strong>自社の業務課題に応用</strong> して、チームの生産性向上に貢献してください。</p>
+
+    <div class="point-box">
+      <div class="point-title">💡 最後のアドバイス</div>
+      <ul>
+        <li><strong>小さく作って、大きく育てる</strong>:最初から完璧なアプリを目指さず、まず最小限の機能で使い始め、フィードバックを得ながら改善していく</li>
+        <li><strong>ユーザーの声を聞く</strong>:アプリの開発者である自分だけでなく、実際に使うメンバーの意見を取り入れる</li>
+        <li><strong>壊れたら直す</strong>:エラーが出ても焦らない。本マニュアルの Q&A を参照し、一つずつ原因を切り分ける</li>
+        <li><strong>仲間を増やす</strong>:社内に AppSheet を使える人が増えれば、自分の負担も減り、より多くの業務が改善できる</li>
+      </ul>
+    </div>
+
+    <nav class="page-nav">
+      <a href="chapter08.html">← 第8章:パフォーマンス最適化と運用設計</a>
+      <a href="../index.html">トップページへ →</a>
+    </nav>
+  </main>
+  <footer class="site-footer">AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新:2026年4月</footer>
+</div>
+</body>
+</html>

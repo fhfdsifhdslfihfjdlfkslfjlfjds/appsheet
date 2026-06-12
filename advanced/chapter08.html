@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第8章:パフォーマンス最適化と運用設計</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9; }
+  .page-wrapper { max-width: 960px; margin: 0 auto; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh; }
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+  .content { padding: 36px 40px 60px; }
+  .chapter-title-block { background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%); border: 1px solid #f48fb1; border-radius: 10px; padding: 32px 36px; margin-bottom: 40px; text-align: center; }
+  .chapter-number { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #c62828; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before { content: ''; position: absolute; top: 16px; left: 24px; right: 24px; height: 3px; background: #d4dce8; z-index: 0; }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #d4dce8; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a { display: flex; align-items: center; padding: 14px 12px; text-decoration: none; color: #333; transition: background .15s; border-radius: 6px; }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #c62828; color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0; }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+  .section-heading { font-size: 21px; color: #c62828; font-weight: 700; margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828; }
+  .section-heading .sec-num { background: #c62828; color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; font-size: 15px; font-weight: 700; margin-right: 10px; vertical-align: middle; }
+  .sub-heading { font-size: 17px; color: #ef5350; font-weight: 700; margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350; }
+  .content p { margin-bottom: 16px; }
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num { width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre { background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+  .note-box { border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box { border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box { border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+  .page-nav { display: flex; justify-content: space-between; margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef; }
+  .page-nav a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #c62828; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; transition: background .15s; }
+  .page-nav a:hover { background: #8e0000; }
+  .site-footer { background: #f4f6f9; text-align: center; padding: 20px; font-size: 12px; color: #999; border-top: 1px solid #e0e6ef; }
+  @media print { body { background: #fff; } .page-wrapper { box-shadow: none; } .page-nav, .progress-bar-wrapper { display: none; } }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a><span class="sep">▸</span><a href="../index.html">上級編</a><span class="sep">▸</span><strong>第8章:パフォーマンス最適化と運用設計</strong>
+  </nav>
+  <main class="content">
+    <div class="chapter-title-block">
+      <div class="chapter-number">8</div>
+      <h2>パフォーマンス最適化と運用設計</h2>
+      <div class="chapter-sub">運用編 ─ 安定稼働のためのSync設定・データ管理・運用ルール</div>
+    </div>
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Security</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">高度関数</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Dashboard</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">書式UX</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Slice応用</div></div>
+        <div class="progress-step active"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec8-1"><span class="toc-num">8-1</span><span class="toc-text"><strong>なぜ運用設計が必要か</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec8-2"><span class="toc-num">8-2</span><span class="toc-text"><strong>Sync設定の最適化</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec8-3"><span class="toc-num">8-3</span><span class="toc-text"><strong>Security Filterによるパフォーマンス向上</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec8-4"><span class="toc-num">8-4</span><span class="toc-text"><strong>データ量の管理とアーカイブ</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec8-5"><span class="toc-num">8-5</span><span class="toc-text"><strong>運用ルールと命名規則</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec8-6"><span class="toc-num">8-6</span><span class="toc-text"><strong>動作確認とまとめ</strong></span><span class="toc-arrow">▸</span></a></li>
+      </ul>
+    </div>
+
+    <!-- 8-1 -->
+    <h3 class="section-heading" id="sec8-1"><span class="sec-num">8-1</span> なぜ運用設計が必要か</h3>
+    <p>ここまでの7章で、プロジェクト管理アプリの<strong>機能面</strong>は完成しました。しかし、実際に社内で使い始めると、「動作が遅い」「データが増えすぎた」「誰がどこを変更したかわからない」といった<strong>運用上の課題</strong>が出てきます。本章では、こうした課題を未然に防ぐための設計を行います。</p>
+    <div class="point-box">
+      <div class="point-title">📌 本章で扱う4つのテーマ</div>
+      <ul>
+        <li><strong>Sync設定</strong>:データの同期間隔を調整してパフォーマンスを向上</li>
+        <li><strong>Security Filterの副次効果</strong>:アクセス制御が実はパフォーマンスにも貢献</li>
+        <li><strong>データ量の管理</strong>:不要データの削減・アーカイブ戦略</li>
+        <li><strong>運用ルール</strong>:命名規則・変更管理・バックアップの仕組み</li>
+      </ul>
+    </div>
+
+    <!-- 8-2 -->
+    <h3 class="section-heading" id="sec8-2"><span class="sec-num">8-2</span> Sync設定の最適化</h3>
+    <p>AppSheet は、Google スプレッドシートのデータを<strong>一定間隔で同期(Sync)</strong>してアプリに反映します。この同期間隔を適切に設定することで、データの鮮度とパフォーマンスのバランスを取ります。</p>
+
+    <h4 class="sub-heading">■ Sync の仕組み</h4>
+    <p>AppSheet のデータ同期には2種類あります。</p>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:160px;">種類</th><th style="width:180px;">タイミング</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;"><strong>手動Sync</strong></td><td style="text-align:left;">ユーザーが🔄を押したとき</td><td style="text-align:left;">即座に最新データを取得。確実だが手動操作が必要</td></tr>
+        <tr><td style="text-align:left;"><strong>自動Sync</strong></td><td style="text-align:left;">設定した間隔で自動実行</td><td style="text-align:left;">バックグラウンドで定期的にデータを更新</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 自動Sync の設定</h4>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p>左メニューの <strong>⚙ Settings</strong> をクリックします。</p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p>サブメニューから <strong>「Performance」</strong> を選択します。</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p><strong>「Sync: App to Cloud」</strong> セクションの各設定を確認・変更します。</p></div></div>
+      <div class="proc-step"><div class="proc-num">4</div><div class="proc-body"><p><strong>Save</strong> をクリック。</p></div></div>
+    </div>
+
+    <h4 class="sub-heading">■ 推奨設定</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:180px;">項目</th><th style="width:120px;">推奨値</th><th>説明</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">Sync on start</td><td style="text-align:left;">ON</td><td style="text-align:left;">アプリ起動時に最新データを取得。常にON推奨</td></tr>
+        <tr><td style="text-align:left;">Delayed sync</td><td style="text-align:left;">OFF</td><td style="text-align:left;">OFFにすると、データ変更のたびに即座に同期。ONにするとSyncボタンを押すまで同期を保留(通信量を節約したい場合)</td></tr>
+        <tr><td style="text-align:left;">Automatic updates</td><td style="text-align:left;">ON</td><td style="text-align:left;">約30分ごとに自動で他ユーザーの変更を取得。複数人で使う場合は必ずON</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 Automatic updates の同期間隔について</div>
+      <strong>Automatic updates</strong> をONにすると、AppSheet は <strong>約30分ごと</strong> にバックグラウンドで自動同期を実行します。この間隔はユーザー側では変更できません。「もっと頻繁に同期したい」場合は、ユーザーに <strong>手動で🔄ボタンを押す</strong> よう案内してください。逆に、頻繁すぎると感じる場合は Automatic updates をOFFにし、<strong>Delayed sync をON</strong> にすることで、手動同期のみの運用にできます。
+    </div>
+
+    <!-- 8-3 -->
+    <h3 class="section-heading" id="sec8-3"><span class="sec-num">8-3</span> Security Filterによるパフォーマンス向上</h3>
+    <p>第3章で設定した Security Filter は、アクセス制御だけでなく、<strong>パフォーマンスの向上にも寄与</strong>しています。</p>
+
+    <h4 class="sub-heading">■ Security Filter のパフォーマンス効果</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:200px;">比較項目</th><th>Security Filter なし</th><th>Security Filter あり</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">読み込むデータ量</td><td style="text-align:left;">テーブル全件(例:1000行)</td><td style="text-align:left;"><strong>条件に合う行だけ</strong>(例:50行)</td></tr>
+        <tr><td style="text-align:left;">同期時間</td><td style="text-align:left;">長い</td><td style="text-align:left;"><strong>短い</strong></td></tr>
+        <tr><td style="text-align:left;">アプリの体感速度</td><td style="text-align:left;">データ量に比例して遅くなる</td><td style="text-align:left;"><strong>一定の速さを維持</strong></td></tr>
+        <tr><td style="text-align:left;">Virtual Column の計算量</td><td style="text-align:left;">全件分を計算</td><td style="text-align:left;"><strong>取得した行だけ計算</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>つまり、Security Filter は <strong>「セキュリティの仕組み」であると同時に「パフォーマンス最適化の仕組み」</strong> でもあります。メンバーが自分のタスクだけを表示する設計は、セキュリティだけでなく、アプリの動作速度にも好影響を与えます。</p>
+
+    <div class="point-box">
+      <div class="point-title">📌 Slice と Security Filter のパフォーマンスの違い</div>
+      <ul>
+        <li><strong>Security Filter</strong>:サーバー側で絞り込み → <strong>端末にデータを送る前に削減</strong> → 高速</li>
+        <li><strong>Slice</strong>:端末にデータを送った後にフィルタ → データ量自体は変わらない</li>
+      </ul>
+      <p style="margin-top:6px;">パフォーマンス向上が目的なら、<strong>Slice より Security Filter のほうが効果が大きい</strong>です。ただし Security Filter は全ビューに影響するため、「管理者には全件を見せたい」場合は OR 条件で管理者を除外する設計(第3章)が必要です。</p>
+    </div>
+
+    <!-- 8-4 -->
+    <h3 class="section-heading" id="sec8-4"><span class="sec-num">8-4</span> データ量の管理とアーカイブ</h3>
+    <p>AppSheet は Google スプレッドシートをデータソースとして使うため、<strong>スプレッドシートの行数が増えるほどパフォーマンスが低下</strong>します。長期運用を見据えたデータ管理戦略を立てておきましょう。</p>
+
+    <h4 class="sub-heading">■ AppSheet のデータ量の目安</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:160px;">データ量</th><th style="width:120px;">体感速度</th><th>推奨アクション</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">〜500行</td><td style="text-align:left;">🟢 快適</td><td style="text-align:left;">特に対策不要</td></tr>
+        <tr><td style="text-align:left;">500〜2,000行</td><td style="text-align:left;">🟡 やや遅い</td><td style="text-align:left;">Security Filter の活用、不要カラムの非表示</td></tr>
+        <tr><td style="text-align:left;">2,000〜5,000行</td><td style="text-align:left;">🟠 遅い</td><td style="text-align:left;">アーカイブの検討、Sync 間隔の調整</td></tr>
+        <tr><td style="text-align:left;">5,000行〜</td><td style="text-align:left;">🔴 非常に遅い</td><td style="text-align:left;">アーカイブの実施、データソースの変更検討</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ アーカイブの方法</h4>
+    <p>完了したプロジェクトのタスクやコメントは、一定期間が経過したら<strong>別シート(アーカイブシート)に移動</strong>することで、アクティブなデータ量を抑えられます。</p>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p>Google スプレッドシートに <strong>「タスク_アーカイブ」</strong> シートを新規作成します(カラム構成はタスクシートと同じ)。</p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p>完了日が <strong>3ヶ月以上前</strong> のタスク行を、タスクシートからアーカイブシートに<strong>切り取り→貼り付け</strong>で移動します。</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p>AppSheet 側で <strong>Sync(🔄)</strong> を押すと、移動した行がアプリから消えます。</p></div></div>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ アーカイブ前の注意</div>
+      <ul style="margin: 4px 0 0 20px;">
+        <li>アーカイブ対象のタスクに紐づく<strong>コメントも一緒にアーカイブ</strong>してください(Is a part of? の関係上、親だけ消すとエラーの原因になります)</li>
+        <li>アーカイブ後は <strong>プロジェクトの進捗率が変わります</strong>(タスク数が減るため)。完了プロジェクト自体もアーカイブするのがおすすめです</li>
+        <li>スプレッドシートの操作なので、<strong>AppSheet エディタではなく Google スプレッドシート上で</strong>行います</li>
+      </ul>
+    </div>
+
+    <h4 class="sub-heading">■ その他のパフォーマンス改善策</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:220px;">改善策</th><th>効果</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">不要な Virtual Column を削除</td><td style="text-align:left;">再計算の負荷を軽減</td></tr>
+        <tr><td style="text-align:left;">ビューの Column order で表示カラムを絞る</td><td style="text-align:left;">描画の負荷を軽減</td></tr>
+        <tr><td style="text-align:left;">使わないビューを削除 or Hide</td><td style="text-align:left;">不要な再描画を防止</td></tr>
+        <tr><td style="text-align:left;">画像カラムの使用を最小限に</td><td style="text-align:left;">データ転送量を大幅削減</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 8-5 -->
+    <h3 class="section-heading" id="sec8-5"><span class="sec-num">8-5</span> 運用ルールと命名規則</h3>
+    <p>アプリが複雑になるほど、<strong>「誰が何をどう管理するか」</strong>のルールが重要になります。チームで運用する前に、基本ルールを決めておきましょう。</p>
+
+    <h4 class="sub-heading">■ ① 命名規則</h4>
+    <p>テーブル・カラム・Slice・ビュー・Format Rule の名前に一貫性を持たせると、メンテナンスが楽になります。</p>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:140px;">対象</th><th style="width:200px;">命名規則</th><th>例</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">テーブル</td><td style="text-align:left;">日本語、単数形</td><td style="text-align:left;">メンバー / タスク / プロジェクト</td></tr>
+        <tr><td style="text-align:left;">カラム</td><td style="text-align:left;">日本語、簡潔に</td><td style="text-align:left;">プロジェクトID / 担当者 / 期限</td></tr>
+        <tr><td style="text-align:left;">Virtual Column</td><td style="text-align:left;">日本語、計算内容がわかる名前</td><td style="text-align:left;">残日数 / 期限ステータス / 進捗率</td></tr>
+        <tr><td style="text-align:left;">Slice</td><td style="text-align:left;">「何が表示されるか」がわかる名前</td><td style="text-align:left;">マイタスク / 期限超過タスク / 進行中プロジェクト</td></tr>
+        <tr><td style="text-align:left;">ビュー</td><td style="text-align:left;">Slice と同じ名前 or 用途+形式</td><td style="text-align:left;">マイタスク / ステータス別タスク数 / 管理者ダッシュボード</td></tr>
+        <tr><td style="text-align:left;">Format Rule</td><td style="text-align:left;">「対象_条件」形式</td><td style="text-align:left;">優先度_高 / 期限超過_未完了 / プロジェクト_完了</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ ② 変更管理</h4>
+    <p>AppSheet アプリの設定変更は、<strong>スプレッドシートのデータとは別に管理</strong>する必要があります。</p>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:170px;">やるべきこと</th><th>具体的な方法</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">変更前のバックアップ</td><td style="text-align:left;">大きな変更前に <strong>スプレッドシートのコピーを作成</strong>(ファイル → コピーを作成)</td></tr>
+        <tr><td style="text-align:left;">変更履歴の記録</td><td style="text-align:left;">スプレッドシートに<strong>「変更履歴」シート</strong>を作り、日付・変更内容・変更者を記録</td></tr>
+        <tr><td style="text-align:left;">テスト環境の確保</td><td style="text-align:left;">本番アプリを <strong>コピー</strong> して、テスト用アプリで先に検証してから本番に反映</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ ③ アプリのコピー方法</h4>
+    <p>テスト環境を作るには、アプリをコピーします。</p>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p>AppSheet エディタの左メニュー上部にある <strong>アプリ名の横の「⋮」メニュー</strong>(または右上のメニュー)をクリックします。</p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p><strong>「Copy app」</strong> を選択します。</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p><strong>「Copy data」をオン</strong>にすると、スプレッドシートもコピーされます(テスト用にはオン推奨)。</p></div></div>
+      <div class="proc-step"><div class="proc-num">4</div><div class="proc-body"><p>コピーされたアプリで変更をテストし、問題なければ本番アプリに同じ変更を適用します。</p></div></div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 「Copy data」のオン/オフの使い分け</div>
+      <ul style="margin: 4px 0 0 20px;">
+        <li><strong>Copy data = ON</strong>:テスト用。データも含めてまるごとコピー。テスト後に削除してOK</li>
+        <li><strong>Copy data = OFF</strong>:同じデータソース(スプレッドシート)を共有する別アプリを作る場合。<strong>注意:元のデータに影響を与える可能性あり</strong></li>
+      </ul>
+    </div>
+
+    <h4 class="sub-heading">■ ④ バックアップ</h4>
+    <p>Google スプレッドシートは<strong>バージョン履歴</strong>機能で過去のデータを復元できますが、定期的にコピーを取っておくとより安全です。</p>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:160px;">バックアップ方法</th><th>頻度</th><th>メリット</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">バージョン履歴(自動)</td><td>自動</td><td style="text-align:left;">Google ドライブが自動保存。数ヶ月前のデータも復元可能</td></tr>
+        <tr><td style="text-align:left;">ファイルのコピー(手動)</td><td>月1回</td><td style="text-align:left;">特定時点のスナップショットとして確実に保存</td></tr>
+        <tr><td style="text-align:left;">xlsx ダウンロード(手動)</td><td>四半期に1回</td><td style="text-align:left;">Google ドライブ以外の場所にも保存できる</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 8-6 -->
+    <h3 class="section-heading" id="sec8-6"><span class="sec-num">8-6</span> 動作確認とまとめ</h3>
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+    <ul class="checklist">
+      <li>Settings → Performance で <strong>Automatic updates</strong> がON、<strong>Sync on start</strong> がONに設定されている</li>
+      <li>タスクテーブルに <strong>Security Filter</strong> が設定されている(第3章で実施済み)</li>
+      <li>スプレッドシートのデータ量が <strong>5,000行を大幅に超えていない</strong></li>
+      <li>命名規則が統一されており、Slice / ビュー / Format Rule の名前から内容が推測できる</li>
+      <li>本番アプリの<strong>コピー(テスト用)</strong>の作成方法を理解している</li>
+      <li>スプレッドシートの<strong>バージョン履歴</strong>の確認方法を理解している</li>
+    </ul>
+
+    <h4 class="sub-heading">■ 第8章のまとめ</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:60px;">No.</th><th style="width:260px;">テーマ</th><th>ポイント</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">Sync設定の最適化</td><td>Settings → Performance で Automatic updates / Sync on start / Delayed sync を調整</td></tr>
+        <tr><td>2</td><td style="text-align:left;">Security Filterの副次効果</td><td>サーバー側でデータ削減 → 端末への転送量を低減</td></tr>
+        <tr><td>3</td><td style="text-align:left;">データ量の管理</td><td>500行以下が快適。5,000行超はアーカイブを検討</td></tr>
+        <tr><td>4</td><td style="text-align:left;">命名規則</td><td>「対象_条件」形式で統一し、メンテナンス性を向上</td></tr>
+        <tr><td>5</td><td style="text-align:left;">変更管理とバックアップ</td><td>アプリコピーでテスト環境確保 / バージョン履歴で復元</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      機能開発だけでなく、<strong>運用を見据えた設計</strong>がプロのアプリ開発者の仕事です。Sync設定・Security Filterの副次効果・データ量管理・命名規則・変更管理・バックアップという<strong>6つの運用スキル</strong>を習得しました。次の第9章では、上級編全体を振り返り、初級～上級の学びを総まとめします。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      Settings → Performance の <strong>Automatic updates</strong> と <strong>Sync on start</strong> がONになっていることを確認してください。複数人で使うアプリでは、他ユーザーの変更が自動で反映される設定が重要です。
+    </div>
+
+    <nav class="page-nav">
+      <a href="chapter07.html">← 第7章:Sliceの応用と動的フィルタ</a>
+      <a href="chapter09.html">第9章:全体まとめと今後の展望 →</a>
+    </nav>
+  </main>
+  <footer class="site-footer">AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新:2026年4月</footer>
+</div>
+</body>
+</html>

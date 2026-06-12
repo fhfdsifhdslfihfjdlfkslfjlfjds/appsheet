@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第4章:高度な関数とVirtual Column</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー（上級編：ピンク〜赤系） */
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%);
+    border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #c62828; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828;
+  }
+  .section-heading .sec-num {
+    background: #c62828; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #ef5350; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 関数リファレンス表 */
+  .formula-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .formula-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; }
+  .formula-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; }
+  .formula-table td:first-child { text-align: center; font-weight: 600; }
+  .formula-table td code { white-space: nowrap; }
+  .formula-table tbody tr:hover { background: #fdf0f3; }
+
+  /* 共通：図 */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #f48fb1; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+
+  /* VC設定カード */
+  .vc-card {
+    background: #fff; border: 2px solid #f48fb1; border-radius: 12px;
+    padding: 22px 26px; margin: 22px 0;
+  }
+  .vc-card .vc-title {
+    font-size: 17px; font-weight: 700; color: #c62828; margin-bottom: 12px;
+    padding-bottom: 10px; border-bottom: 2px dashed #f48fb1;
+  }
+  .vc-card .vc-spec {
+    display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px;
+    font-size: 13px; margin-bottom: 12px;
+  }
+  .vc-card .vc-spec dt {
+    font-weight: 700; color: #555;
+  }
+  .vc-card .vc-spec dd code { font-size: 12px; }
+
+  /* 関数フロー図 */
+  .formula-flow {
+    background: linear-gradient(135deg, #fdf0f3 0%, #fce4ec 100%);
+    border: 1px solid #f48fb1; border-radius: 12px;
+    padding: 24px 20px; margin: 24px 0;
+  }
+  .formula-step {
+    background: #fff; border-radius: 8px; padding: 14px 18px; margin: 12px 0;
+    border-left: 4px solid #c62828; font-size: 13px;
+  }
+  .formula-step .step-num {
+    display: inline-block; background: #c62828; color: #fff;
+    width: 22px; height: 22px; border-radius: 50%;
+    text-align: center; line-height: 22px; font-size: 12px;
+    font-weight: 700; margin-right: 8px;
+  }
+  .formula-step .step-result {
+    margin-top: 6px; padding: 6px 10px; background: #fef8f0;
+    border-radius: 4px; font-family: 'Consolas', monospace;
+    font-size: 12px; color: #c62828;
+  }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #c62828; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #8e0000; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">上級編</a>
+    <span class="sep">▸</span>
+    <strong>第4章:高度な関数とVirtual Column</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">4</div>
+      <h2>高度な関数とVirtual Column</h2>
+      <div class="chapter-sub">計算編 ─ SELECT/COUNT/FILTERで進捗率を自動計算する</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Security</div></div>
+        <div class="progress-step active"><div class="dot">4</div><div class="label">高度関数</div></div>
+        <div class="progress-step"><div class="dot">5</div><div class="label">Dashboard</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式UX</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Slice応用</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec4-1">
+          <span class="toc-num">4-1</span>
+          <span class="toc-text"><strong>この章で作るVirtual Columnの全体像</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-2">
+          <span class="toc-num">4-2</span>
+          <span class="toc-text"><strong>上級編で使う高度な関数リファレンス</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-3">
+          <span class="toc-num">4-3</span>
+          <span class="toc-text"><strong>タスクテーブルのVirtual Column(残日数・期限ステータス)</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-4">
+          <span class="toc-num">4-4</span>
+          <span class="toc-text"><strong>プロジェクトテーブルのVirtual Column(タスク数・完了数・進捗率)</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-5">
+          <span class="toc-num">4-5</span>
+          <span class="toc-text"><strong>進捗率の式を分解して理解する</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec4-6">
+          <span class="toc-num">4-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-1 全体像 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-1">
+      <span class="sec-num">4-1</span> この章で作るVirtual Columnの全体像
+    </h3>
+
+    <p>本章では、第2章で予告した <strong>5つのVirtual Column</strong> を実装します。これらは <strong>SELECT / COUNT / FILTER / ROUND / IFS</strong> といった高度な関数を組み合わせて、<strong>テーブルをまたいだ集計や条件分岐</strong> を実現するものです。</p>
+
+    <h4 class="sub-heading">■ 作成する5つのVirtual Column</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:140px;">テーブル</th>
+          <th style="width:170px;">カラム名</th>
+          <th>役割</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">タスク</td><td style="text-align:left;"><strong>残日数</strong></td><td style="text-align:left;">期限まであと何日かを自動計算（既に過ぎていれば負数）</td></tr>
+        <tr><td>2</td><td style="text-align:left;">タスク</td><td style="text-align:left;"><strong>期限ステータス</strong></td><td style="text-align:left;">余裕/直前/超過などのラベルを動的に判定</td></tr>
+        <tr><td>3</td><td style="text-align:left;">プロジェクト</td><td style="text-align:left;"><strong>タスク数</strong></td><td style="text-align:left;">そのプロジェクトに紐づくタスクの総数</td></tr>
+        <tr><td>4</td><td style="text-align:left;">プロジェクト</td><td style="text-align:left;"><strong>完了タスク数</strong></td><td style="text-align:left;">ステータス=完了のタスク数</td></tr>
+        <tr><td>5</td><td style="text-align:left;">プロジェクト</td><td style="text-align:left;"><strong>進捗率</strong></td><td style="text-align:left;">完了タスク数÷タスク数を整数の%値で表示</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Virtual Column のおさらい（中級編との違い）</h4>
+
+    <p>中級編でも Virtual Column を使いましたが、上級編ではより複雑な計算を扱います。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:140px;">レベル</th><th style="width:200px;">使う関数</th><th>例</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>中級編</td><td style="text-align:left;">IFS / HOUR / TODAY()</td><td style="text-align:left;">勤務時間 = HOUR(退勤時刻 - 出勤時刻)</td></tr>
+        <tr style="background:#fce4ec;"><td><strong>上級編</strong></td><td style="text-align:left;"><strong>SELECT / COUNT / FILTER</strong></td><td style="text-align:left;"><strong>進捗率 = ([完了タスク数] * 100) / [タスク数]</strong></td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">📌 上級編で扱う"テーブルをまたいだ計算"</div>
+      <ul>
+        <li><strong>SELECT / FILTER</strong>：別テーブルから条件付きで行を取得</li>
+        <li><strong>COUNT</strong>：取得したリストの件数を数える</li>
+        <li><strong>SUM / AVERAGE</strong>：リストの合計・平均を計算</li>
+        <li><strong>ANY</strong>：リストから1件取り出す（第3章で既出）</li>
+      </ul>
+      これらを組み合わせて、<strong>「親レコードから子レコードを集計する」</strong> 仕組みを作るのが本章のメインテーマです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-2 関数リファレンス -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-2">
+      <span class="sec-num">4-2</span> 上級編で使う高度な関数リファレンス
+    </h3>
+
+    <p>本章で使う関数を一覧にまとめます。すべての関数を覚える必要はありません。<strong>「こういう関数がある」</strong> ということを把握しておけば、必要なときに調べて使えます。</p>
+
+    <h4 class="sub-heading">■ リスト操作関数</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr><th style="width:140px;">関数</th><th style="width:280px;">構文</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>SELECT</strong></td>
+          <td><code>SELECT(テーブル[カラム], 条件式)</code></td>
+          <td>条件に合う行から指定カラムの値リストを取得</td>
+        </tr>
+        <tr>
+          <td><strong>FILTER</strong></td>
+          <td><code>FILTER("テーブル", 条件式)</code></td>
+          <td>条件に合うキーのリストを取得</td>
+        </tr>
+        <tr>
+          <td><strong>COUNT</strong></td>
+          <td><code>COUNT(リスト)</code></td>
+          <td>リストの件数を返す</td>
+        </tr>
+        <tr>
+          <td><strong>ANY</strong></td>
+          <td><code>ANY(リスト)</code></td>
+          <td>リストから1件取り出す（単一値に変換）</td>
+        </tr>
+        <tr>
+          <td><strong>SUM</strong></td>
+          <td><code>SUM(数値リスト)</code></td>
+          <td>リスト内の数値を合計</td>
+        </tr>
+        <tr>
+          <td><strong>AVERAGE</strong></td>
+          <td><code>AVERAGE(数値リスト)</code></td>
+          <td>リスト内の数値の平均</td>
+        </tr>
+        <tr>
+          <td><strong>MAX / MIN</strong></td>
+          <td><code>MAX(数値リスト)</code></td>
+          <td>リスト内の最大値/最小値</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 計算・条件判定関数</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr><th style="width:140px;">関数</th><th style="width:280px;">構文</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ROUND</strong></td>
+          <td><code>ROUND(数値, 桁数)</code></td>
+          <td>指定桁数で四捨五入</td>
+        </tr>
+        <tr>
+          <td><strong>IFS</strong></td>
+          <td><code>IFS(条件1, 値1, 条件2, 値2, ...)</code></td>
+          <td>複数条件の分岐（中級編で既出）</td>
+        </tr>
+        <tr>
+          <td><strong>IF</strong></td>
+          <td><code>IF(条件, 真の値, 偽の値)</code></td>
+          <td>2分岐の条件式</td>
+        </tr>
+        <tr>
+          <td><strong>ISBLANK</strong></td>
+          <td><code>ISBLANK([カラム])</code></td>
+          <td>空欄かどうかの判定</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Related カラム（Refの自動生成）</h4>
+
+    <p>第2章で説明したとおり、Ref を設定すると親テーブルに <strong>「Related ◯◯」</strong> Virtual Column が自動生成されています。これも実は <strong>SELECT を使って構築されたリスト</strong> です。本章ではこのリストを集計対象として活用します。</p>
+
+    <table class="formula-table">
+      <thead>
+        <tr><th style="width:230px;">親テーブルでの呼び方</th><th>中身（実態）</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>[Related タスクs]</code></td>
+          <td><code>SELECT(タスク[タスクID], [プロジェクトID] = [_THISROW].[プロジェクトID])</code> と同等</td>
+        </tr>
+        <tr>
+          <td><code>[Related コメントs]</code></td>
+          <td><code>SELECT(コメント[コメントID], [タスクID] = [_THISROW].[タスクID])</code> と同等</td>
+        </tr>
+      </tbody>
+    </table>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-3 タスクテーブルのVC -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-3">
+      <span class="sec-num">4-3</span> タスクテーブルのVirtual Column(残日数・期限ステータス)
+    </h3>
+
+    <p>まず、テーブルをまたがない <strong>シンプルな Virtual Column</strong> から作ります。タスクテーブル単体で完結する計算です。</p>
+
+    <h4 class="sub-heading">■ ① 残日数</h4>
+
+    <div class="vc-card">
+      <div class="vc-title">📅 残日数</div>
+      <dl class="vc-spec">
+        <dt>テーブル</dt><dd>タスク</dd>
+        <dt>Type</dt><dd>Number</dd>
+        <dt>App formula</dt><dd><code>HOUR([期限] - TODAY()) / 24</code></dd>
+        <dt>説明</dt><dd>期限から今日までの日数。期限が過ぎていれば負数になる</dd>
+      </dl>
+    </div>
+
+    <p>AppSheet では Date 型同士の引き算 <code>[期限] - TODAY()</code> の結果は、そのままでは <strong>「Duration(時間差)」型</strong> として返ります。Number 型として日数を取得するには <strong><code>HOUR()</code> 関数で時間に変換し、24で割る</strong> 必要があります。たとえば期限が「2026/05/01」で今日が「2026/04/25」なら、結果は <code>6</code> になります。</p>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ なぜ HOUR() で割るのか？</div>
+      <code>[期限] - TODAY()</code> の結果は、AppSheet 内部では時間量(Duration)として保持されます。<code>HOUR()</code> はこれを <strong>「時間」</strong> に変換します(6日 → 144時間)。これを <code>/ 24</code> で割ることで <strong>「日数」</strong> として扱えるようになります。Number 型と整合し、数値比較も可能になります。
+    </div>
+
+    <h4 class="sub-heading">■ ② 期限ステータス</h4>
+
+    <p>「残日数」をもとに、<strong>余裕 / 直前 / 超過</strong> といったラベルを動的に表示します。</p>
+
+    <div class="vc-card">
+      <div class="vc-title">⚠️ 期限ステータス</div>
+      <dl class="vc-spec">
+        <dt>テーブル</dt><dd>タスク</dd>
+        <dt>Type</dt><dd>Text</dd>
+        <dt>App formula</dt><dd>下記</dd>
+        <dt>説明</dt><dd>残日数に応じて「余裕あり/期限間近/期限超過/完了済み」を判定</dd>
+      </dl>
+<pre><code>IFS(
+  [ステータス] = "完了",       "✅ 完了済み",
+  [残日数] &lt; 0,               "🔴 期限超過",
+  [残日数] &lt;= 3,              "🟡 期限間近",
+  [残日数] &lt;= 7,              "🟠 1週間以内",
+  TRUE,                        "🟢 余裕あり"
+)</code></pre>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 IFSの最後の TRUE は「それ以外」</div>
+      IFS の最後に <code>TRUE, "値"</code> を置くと、<strong>どの条件にも当てはまらなかった場合のデフォルト値</strong> になります。これにより、すべてのケースを網羅できます。
+    </div>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Data → Columns で <strong>タスク</strong> テーブルを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>右上の <strong>「+ Add Virtual Column」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>Column name に <strong>残日数</strong>、App formula に <code>HOUR([期限] - TODAY()) / 24</code> を入力し、Type を <strong>Number</strong> に設定して <strong>Done</strong>。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>もう一度 <strong>「+ Add Virtual Column」</strong> をクリックし、Column name に <strong>期限ステータス</strong>、App formula に上記の IFS 式を入力し、Type を <strong>Text</strong> に設定して <strong>Done</strong>。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch04-03-01.png" alt="期限ステータス Virtual Columnの設定">
+      <figcaption>図4-3-1：期限ステータスのIFS式を設定</figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 順序に注意</div>
+      期限ステータスは「残日数」を参照しているため、<strong>残日数を先に作ってから</strong> 期限ステータスを作る必要があります。順序を逆にすると <code>[残日数]</code> が認識されずエラーになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-4 プロジェクトテーブルのVC -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-4">
+      <span class="sec-num">4-4</span> プロジェクトテーブルのVirtual Column(タスク数・完了数・進捗率)
+    </h3>
+
+    <p>ここからが上級編の本領です。<strong>プロジェクト</strong> テーブルに、<strong>子レコード(タスク)を集計した値</strong> を持たせます。SELECT と COUNT を組み合わせます。</p>
+
+    <h4 class="sub-heading">■ ③ タスク数</h4>
+
+    <p>そのプロジェクトに紐づくタスクの総数を取得します。</p>
+
+    <div class="vc-card">
+      <div class="vc-title">📊 タスク数</div>
+      <dl class="vc-spec">
+        <dt>テーブル</dt><dd>プロジェクト</dd>
+        <dt>Type</dt><dd>Number</dd>
+        <dt>App formula</dt><dd><code>COUNT([Related タスクs])</code></dd>
+        <dt>説明</dt><dd>そのプロジェクトに属するタスクの件数</dd>
+      </dl>
+    </div>
+
+    <p>第2章で説明した <strong>「Related タスクs」</strong> という自動生成された Virtual Column を、そのまま COUNT に渡すだけです。これだけで、各プロジェクトの行ごとに「自分の子タスクの数」を返してくれます。</p>
+
+    <h4 class="sub-heading">■ ④ 完了タスク数</h4>
+
+    <p>「ステータス = 完了」のタスクだけを数えます。</p>
+
+    <div class="vc-card">
+      <div class="vc-title">✅ 完了タスク数</div>
+      <dl class="vc-spec">
+        <dt>テーブル</dt><dd>プロジェクト</dd>
+        <dt>Type</dt><dd>Number</dd>
+        <dt>App formula</dt><dd><code>COUNT(SELECT(タスク[タスクID], AND([プロジェクトID] = [_THISROW].[プロジェクトID], [ステータス] = "完了")))</code></dd>
+        <dt>説明</dt><dd>ステータスが「完了」のタスクの件数</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ ⑤ 進捗率</h4>
+
+    <p>完了タスク数 ÷ 全タスク数で進捗率(%)を計算します。タスク数が 0 のときに 0除算エラーにならないよう IF で分岐します。</p>
+
+    <div class="vc-card">
+      <div class="vc-title">📈 進捗率</div>
+      <dl class="vc-spec">
+        <dt>テーブル</dt><dd>プロジェクト</dd>
+        <dt>Type</dt><dd>Decimal</dd>
+        <dt>App formula</dt><dd>下記</dd>
+        <dt>Display name</dt><dd><code>"進捗率(%)"</code></dd>
+        <dt>説明</dt><dd>完了タスクの割合(0~100の整数値)</dd>
+      </dl>
+<pre><code>IF(
+  [タスク数] = 0,
+  0,
+  ([完了タスク数] * 100) / [タスク数]
+)</code></pre>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ なぜ Decimal型 + 整数% で計算するのか?</div>
+      AppSheet は <strong>整数同士の割り算で小数を扱えない</strong> 仕様があります。たとえば <code>1 / 5</code> は <code>0.2</code> ではなく <strong><code>0</code></strong> として計算されてしまいます。<code>* 1.0</code> や <code>DECIMAL()</code> などの変換を試みても、この仕様の制約は回避できないケースが多いです。
+      <p style="margin-top:8px;">そこで本マニュアルでは、<strong>先に <code>* 100</code> してから割り算する</strong> ことで、整数同士の演算で正しい % 値を得る方法を採用します。</p>
+      <ul style="margin: 6px 0 0 20px;">
+        <li><code>[完了タスク数] * 100</code> → 1 × 100 = 100 (整数)</li>
+        <li><code>/ [タスク数]</code> → 100 / 5 = 20 (整数)</li>
+        <li>結果として <strong>「20」</strong>(% を意味する整数値)が得られる</li>
+      </ul>
+      <p style="margin-top:8px;">表示は「20」のように単なる数字になりますが、<strong>Display name に <code>"進捗率(%)"</code> を設定</strong> することで、カラムの見出しに「(%)」を含めて意味を明示します。</p>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 Type に「Percent」を使わない理由</div>
+      AppSheet の <strong>Percent型</strong> は内部値(0.0 〜 1.0)を 0% 〜 100% に自動変換して表示する機能ですが、その計算には小数値の入力が必要です。整数同士の割り算の制約により、本マニュアルでは <strong>Decimal型 + 整数% 表示</strong> を採用しています。なお、本マニュアルの実装では小数点以下が表示されないため、P001は<strong>「20」</strong>、P002は<strong>「33」</strong>のような表示になります。
+    </div>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>Data → Columns で <strong>プロジェクト</strong> テーブルを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>「+ Add Virtual Column」</strong> から、次の順番で3つの Virtual Column を作成します。</p>
+          <p>① <strong>タスク数</strong>（Type: Number / 式: <code>COUNT([Related タスクs])</code>）</p>
+          <p>② <strong>完了タスク数</strong>（Type: Number / 式: 上記の SELECT 式）</p>
+          <p>③ <strong>進捗率</strong>(Type: Decimal / 式: 上記の IF 式 / Display name: <code>"進捗率(%)"</code>)</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> で保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch04-04-01.png" alt="プロジェクトテーブルの3つのVirtual Column">
+      <figcaption>図4-4-1：プロジェクトに追加された3つのVirtual Column</figcaption>
+    </figure>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 進捗率も「タスク数」「完了タスク数」を参照</div>
+      進捗率は他の2つの Virtual Column を参照するため、<strong>必ずタスク数 → 完了タスク数 → 進捗率の順</strong> で作成してください。順序を間違えるとエラーになります。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-5 進捗率の式を分解 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-5">
+      <span class="sec-num">4-5</span> 進捗率の式を分解して理解する
+    </h3>
+
+    <p>4-4で書いた完了タスク数の式は、上級編で最も重要な「テーブルをまたいだ集計」のパターンです。<strong>P001(勤怠管理システム改修)</strong> のレコードを例に、式の動きを段階的に追ってみましょう。</p>
+
+    <p>P001 のタスク数の式：</p>
+
+<pre><code>COUNT(SELECT(タスク[タスクID],
+  AND([プロジェクトID] = [_THISROW].[プロジェクトID], [ステータス] = "完了")
+))</code></pre>
+
+    <div class="formula-flow">
+      <div class="formula-step">
+        <span class="step-num">1</span>
+        <strong>[_THISROW].[プロジェクトID]</strong> は、<strong>現在計算している行</strong> のプロジェクトID。
+        <div class="step-result">P001 の行を計算中なら → "P001"</div>
+      </div>
+
+      <div class="formula-step">
+        <span class="step-num">2</span>
+        <strong>AND([プロジェクトID] = "P001", [ステータス] = "完了")</strong> は、タスクテーブルの各行に対する条件式。
+        <div class="step-result">プロジェクトIDが"P001"かつステータスが"完了"の行だけ TRUE</div>
+      </div>
+
+      <div class="formula-step">
+        <span class="step-num">3</span>
+        <strong>SELECT(タスク[タスクID], ...)</strong> は、上記条件を満たす行のタスクID をリストで取得。
+        <div class="step-result">P001のタスクで完了済み: T001 → ["T001"]</div>
+      </div>
+
+      <div class="formula-step">
+        <span class="step-num">4</span>
+        <strong>COUNT(...)</strong> でリストの件数を数える。
+        <div class="step-result">["T001"] → 1件</div>
+      </div>
+
+      <div class="formula-step" style="border-left-color:#27ae60; background:#f1f9f1;">
+        <span class="step-num" style="background:#27ae60;">✓</span>
+        <strong>結果:</strong> P001のレコードの「完了タスク数」カラム = <strong>1</strong>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ サンプルデータでの計算結果</h4>
+
+    <p>第2章のサンプルデータをベースに、各プロジェクトの計算結果を確認してみましょう。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:80px;">プロジェクトID</th>
+          <th>プロジェクト名</th>
+          <th style="width:90px;">タスク数</th>
+          <th style="width:110px;">完了タスク数</th>
+          <th style="width:120px;">進捗率(%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>P001</td><td style="text-align:left;">勤怠管理システム改修</td><td>5</td><td>1</td><td>20</td></tr>
+        <tr><td>P002</td><td style="text-align:left;">大手企業A社向け提案</td><td>3</td><td>1</td><td>33</td></tr>
+        <tr><td>P003</td><td style="text-align:left;">社内ワークフロー整備</td><td>1</td><td>0</td><td>0</td></tr>
+        <tr><td>P004</td><td style="text-align:left;">AI検証PoC</td><td>1</td><td>1</td><td>100</td></tr>
+        <tr><td>P005</td><td style="text-align:left;">新規顧客B社案件</td><td>2</td><td>0</td><td>0</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">📌 ポイント ─ [_THISROW] は「自分の行」</div>
+      <code>[_THISROW]</code> は、計算中の行を指す特別な記法です。SELECT 関数の中で <code>[プロジェクトID]</code> と書くと「タスクテーブルの行のプロジェクトID」を意味しますが、<code>[_THISROW].[プロジェクトID]</code> と書くと「<strong>計算中のプロジェクトテーブルの行</strong> のプロジェクトID」を意味します。<br>
+      この使い分けが、テーブルをまたいだ集計のキモです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 4-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec4-6">
+      <span class="sec-num">4-6</span> 動作確認とまとめ
+    </h3>
+
+    <h4 class="sub-heading">■ 事前準備:ビューにVirtual Columnを反映/プロジェクト一覧ビューの作成</h4>
+
+    <p>本章で追加した Virtual Column を画面で確認するには、ビューに表示する設定が必要です。第3章で作成した <strong>タスク一覧ビューに期限ステータスを追加</strong> し、新たに <strong>プロジェクト一覧ビュー</strong> も作成します。</p>
+
+    <h5 style="font-weight:700; color:#c62828; margin:18px 0 10px;">① タスク一覧ビューに「期限ステータス」を追加</h5>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>📱 Views</strong> から、第3章で作成した <strong>タスク一覧</strong> ビューを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p><strong>View Options → Column order</strong> セクションで、<strong>「+ Add」</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>期限ステータス</strong> を選択して追加します。並び順は「期限」の右に置くのがおすすめです(順序を変えたい場合は一度削除して入れ直し)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h5 style="font-weight:700; color:#c62828; margin:18px 0 10px;">② プロジェクト一覧ビューを新規作成</h5>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>📱 Views → + Add View → Create a new view</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>次の通り設定します。</p>
+          <p>・<strong>View name</strong>:<code>プロジェクト一覧</code></p>
+          <p>・<strong>For this data</strong>:<code>プロジェクト</code></p>
+          <p>・<strong>View type</strong>:<code>table</code></p>
+          <p>・<strong>Position</strong>:<code>menu</code></p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>View Options → Column order</strong> で次の順に追加します。</p>
+          <p><code>プロジェクトID → プロジェクト名 → カテゴリID → 担当PM → ステータス → タスク数 → 完了タスク数 → 進捗率</code></p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Sort by</strong> を <strong>ステータス</strong> の Ascending(昇順)に設定すると、計画中→進行中→完了→中止の順で並びます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリックして保存します。プレビューの下部メニューに「プロジェクト一覧」が追加されているはずです。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note-box">
+      <div class="note-title">💡 補足 ─ 進捗率の見え方</div>
+      Type を <strong>Decimal</strong> に設定したことで、進捗率は <strong>「20」「33」「100」</strong> のように整数値で表示されます。Display name を <code>"進捗率(%)"</code> としているため、カラムの見出しに「(%)」を含めて表示されます。第6章では、この進捗率に <strong>プログレスバー(進捗バー)</strong> を付けて、より見やすくする方法を扱います。
+    </div>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li>タスクテーブルに <strong>残日数</strong>(Number)と <strong>期限ステータス</strong>(Text)のVirtual Columnが追加されている</li>
+      <li>プロジェクトテーブルに <strong>タスク数</strong>(Number)、<strong>完了タスク数</strong>(Number)、<strong>進捗率</strong>(Decimal)のVirtual Columnが追加されている</li>
+      <li><strong>タスク一覧ビュー</strong> の Column order に <strong>期限ステータス</strong> が追加されている</li>
+      <li><strong>プロジェクト一覧ビュー</strong>(Table View) が作成され、下部メニューに表示されている</li>
+      <li>タスク一覧で、未完了のタスクには「🔴 期限超過」「🟡 期限間近」などのラベルが表示される</li>
+      <li>完了済みタスクの期限ステータスは「✅ 完了済み」と表示される</li>
+      <li>プロジェクト一覧で、各プロジェクトのタスク数・完了タスク数・進捗率が表示される</li>
+      <li>P001は20、P004は100、P003は0などの進捗率が正しく表示される</li>
+    </ul>
+
+
+    <h4 class="sub-heading">■ この章で作成したVirtual Column一覧</h4>
+
+    <table class="formula-table">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:130px;">テーブル</th>
+          <th style="width:150px;">カラム名</th>
+          <th style="width:90px;">Type</th>
+          <th>App formula</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>タスク</td><td>残日数</td><td>Number</td><td><code>HOUR([期限] - TODAY()) / 24</code></td></tr>
+        <tr><td>2</td><td>タスク</td><td>期限ステータス</td><td>Text</td><td><code>IFS([ステータス]="完了","✅ 完了済み", [残日数]&lt;0,"🔴 期限超過", ...)</code></td></tr>
+        <tr><td>3</td><td>プロジェクト</td><td>タスク数</td><td>Number</td><td><code>COUNT([Related タスクs])</code></td></tr>
+        <tr><td>4</td><td>プロジェクト</td><td>完了タスク数</td><td>Number</td><td><code>COUNT(SELECT(タスク[タスクID], AND(...)))</code></td></tr>
+        <tr><td>5</td><td>プロジェクト</td><td>進捗率</td><td>Decimal</td><td><code>IF([タスク数]=0, 0, ([完了タスク数]*100)/[タスク数])</code></td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第4章のまとめ(中級編との違い)</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">上級編で新しく扱ったポイント</th><th>使った仕組み</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">テーブルをまたいだ集計</td><td>SELECT + COUNT で子レコード集計</td></tr>
+        <tr><td>2</td><td style="text-align:left;">「自分の行」の参照</td><td><code>[_THISROW].[カラム名]</code> で計算中の行を参照</td></tr>
+        <tr><td>3</td><td style="text-align:left;">自動生成Relatedカラムの活用</td><td><code>[Related タスクs]</code> でシンプルに集計</td></tr>
+        <tr><td>4</td><td style="text-align:left;">整数同士の演算で%値を取得</td><td>先に*100してから/することで0除算とDecimal問題を回避</td></tr>
+        <tr><td>5</td><td style="text-align:left;">複数Virtual Columnの依存関係</td><td>残日数→期限ステータス、タスク数→完了数→進捗率の順</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      上級編で最も実用的な <strong>「テーブルをまたいだ自動集計」</strong> を実装しました。プロジェクトに紐づくタスクを SELECT で取得して COUNT で数える、というパターンは、業務アプリでもっとも頻出するスキルです。次の第5章では、ここで作った <strong>進捗率や完了タスク数</strong> を使って、<strong>Dashboard ViewやChart Viewで可視化</strong> していきます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      Virtual Column はテーブル更新のたびに再計算されるため、Save 後に Sync(🔄)を1回押して反映を確認してください。タスクのステータスを編集して、対応するプロジェクトの進捗率が変わることも確認しましょう。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter03.html">← 第3章:メンバー管理とSecurity Filter</a>
+      <a href="chapter05.html">第5章:Dashboard Viewで可視化 →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新:2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

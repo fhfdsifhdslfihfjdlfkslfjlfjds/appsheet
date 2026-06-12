@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第5章:Dashboard Viewで可視化</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif;
+    font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9;
+  }
+  .page-wrapper {
+    max-width: 960px; margin: 0 auto; background: #fff;
+    box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh;
+  }
+
+  /* ヘッダー（上級編：ピンク〜赤系） */
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+
+  /* パンくず */
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+
+  /* コンテンツ */
+  .content { padding: 36px 40px 60px; }
+
+  /* 章タイトル */
+  .chapter-title-block {
+    background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%);
+    border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 32px 36px; margin-bottom: 40px; text-align: center;
+  }
+  .chapter-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 56px; height: 56px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px;
+  }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+
+  /* 進捗バー */
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before {
+    content: ''; position: absolute; top: 16px; left: 24px; right: 24px;
+    height: 3px; background: #d4dce8; z-index: 0;
+  }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot {
+    width: 34px; height: 34px; border-radius: 50%; background: #d4dce8;
+    color: #fff; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+  }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+
+  /* 章内目次 */
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a {
+    display: flex; align-items: center; padding: 14px 12px;
+    text-decoration: none; color: #333; transition: background .15s; border-radius: 6px;
+  }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; background: #c62828; color: #fff;
+    border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0;
+  }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+
+  /* セクション見出し */
+  .section-heading {
+    font-size: 21px; color: #c62828; font-weight: 700;
+    margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828;
+  }
+  .section-heading .sec-num {
+    background: #c62828; color: #fff; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; font-size: 15px; font-weight: 700;
+    margin-right: 10px; vertical-align: middle;
+  }
+
+  /* 小見出し */
+  .sub-heading {
+    font-size: 17px; color: #ef5350; font-weight: 700;
+    margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350;
+  }
+
+  .content p { margin-bottom: 16px; }
+
+  /* 手順ステップ */
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num {
+    width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+
+  /* テーブル */
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+
+  /* コードブロック */
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre {
+    background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* ビューカード */
+  .view-card {
+    background: #fff; border: 2px solid #f48fb1; border-radius: 12px;
+    padding: 22px 26px; margin: 22px 0;
+  }
+  .view-card .view-title {
+    font-size: 17px; font-weight: 700; color: #c62828; margin-bottom: 12px;
+    padding-bottom: 10px; border-bottom: 2px dashed #f48fb1;
+  }
+  .view-card .view-spec {
+    display: grid; grid-template-columns: 130px 1fr; gap: 8px 12px;
+    font-size: 13px;
+  }
+  .view-card .view-spec dt {
+    font-weight: 700; color: #555;
+  }
+  .view-card .view-spec dd code { font-size: 12px; }
+
+  /* ビュータイプ一覧 */
+  .view-type-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin: 20px 0;
+  }
+  .view-type-card {
+    background: #fff; border: 1px solid #f48fb1; border-radius: 8px;
+    padding: 14px 16px; text-align: center;
+  }
+  .view-type-card .icon { font-size: 28px; margin-bottom: 6px; }
+  .view-type-card .name { font-weight: 700; color: #c62828; font-size: 14px; margin-bottom: 4px; }
+  .view-type-card .desc { font-size: 11px; color: #888; line-height: 1.5; }
+
+  /* 共通：図 */
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .figure img.sharp { width: 60%; max-width: 480px; }
+
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure {
+    background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px;
+    padding: 16px; margin: 0; text-align: center;
+  }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #f48fb1; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+
+  /* 確認チェックリスト */
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+
+  /* ボックス共通 */
+  .note-box {
+    border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box {
+    border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box {
+    border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0;
+    padding: 18px 22px; margin: 22px 0; font-size: 14px;
+  }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+
+  /* ダッシュボードレイアウト概念図 */
+  .dashboard-layout {
+    background: linear-gradient(135deg, #fdf0f3 0%, #fce4ec 100%);
+    border: 2px dashed #c62828; border-radius: 12px;
+    padding: 24px; margin: 24px 0;
+  }
+  .dashboard-layout-title {
+    text-align: center; font-weight: 700; color: #c62828;
+    margin-bottom: 16px; font-size: 14px;
+  }
+  .dashboard-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  }
+  .dashboard-cell {
+    background: #fff; border: 2px solid #c62828; border-radius: 8px;
+    padding: 18px 14px; text-align: center; min-height: 90px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .dashboard-cell .cell-icon { font-size: 24px; margin-bottom: 6px; }
+  .dashboard-cell .cell-name { font-weight: 700; color: #c62828; font-size: 13px; }
+  .dashboard-cell .cell-type { font-size: 10px; color: #888; margin-top: 4px; }
+
+  /* ページナビ */
+  .page-nav {
+    display: flex; justify-content: space-between;
+    margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef;
+  }
+  .page-nav a {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 24px; background: #c62828; color: #fff;
+    text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700;
+    transition: background .15s;
+  }
+  .page-nav a:hover { background: #8e0000; }
+
+  /* フッター */
+  .site-footer {
+    background: #f4f6f9; text-align: center; padding: 20px;
+    font-size: 12px; color: #999; border-top: 1px solid #e0e6ef;
+  }
+
+  @media print {
+    body { background: #fff; }
+    .page-wrapper { box-shadow: none; }
+    .page-nav, .progress-bar-wrapper { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+  <!-- ヘッダー -->
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+
+  <!-- パンくず -->
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a>
+    <span class="sep">▸</span>
+    <a href="../index.html">上級編</a>
+    <span class="sep">▸</span>
+    <strong>第5章:Dashboard Viewで可視化</strong>
+  </nav>
+
+  <main class="content">
+
+    <!-- 章タイトル -->
+    <div class="chapter-title-block">
+      <div class="chapter-number">5</div>
+      <h2>Dashboard Viewで可視化</h2>
+      <div class="chapter-sub">可視化編 ─ Chart Viewとダッシュボードで進捗を一目で把握</div>
+    </div>
+
+    <!-- 進捗バー -->
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Security</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">高度関数</div></div>
+        <div class="progress-step active"><div class="dot">5</div><div class="label">Dashboard</div></div>
+        <div class="progress-step"><div class="dot">6</div><div class="label">書式UX</div></div>
+        <div class="progress-step"><div class="dot">7</div><div class="label">Slice応用</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+
+    <!-- 章内目次 -->
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec5-1">
+          <span class="toc-num">5-1</span>
+          <span class="toc-text"><strong>この章で作る管理者ダッシュボードの全体像</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-2">
+          <span class="toc-num">5-2</span>
+          <span class="toc-text"><strong>Chart Viewの基本 ─ 4種類のグラフタイプ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-3">
+          <span class="toc-num">5-3</span>
+          <span class="toc-text"><strong>ステータス別タスク数の円グラフを作成</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-4">
+          <span class="toc-num">5-4</span>
+          <span class="toc-text"><strong>プロジェクト別進捗率の棒グラフを作成</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-5">
+          <span class="toc-num">5-5</span>
+          <span class="toc-text"><strong>Dashboard Viewで複数ビューを統合</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+        <li><a href="#sec5-6">
+          <span class="toc-num">5-6</span>
+          <span class="toc-text"><strong>動作確認とまとめ</strong></span>
+          <span class="toc-arrow">▸</span>
+        </a></li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-1 全体像 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-1">
+      <span class="sec-num">5-1</span> この章で作る管理者ダッシュボードの全体像
+    </h3>
+
+    <p>本章では、第4章で作成した <strong>進捗率・完了タスク数・期限ステータス</strong> などの集計値を活用して、<strong>管理者ダッシュボード</strong> を構築します。プロジェクト管理者(PM)が、複数プロジェクトの状況を <strong>1画面で俯瞰</strong> できる業務アプリらしい画面を作ります。</p>
+
+    <h4 class="sub-heading">■ 完成イメージ</h4>
+
+    <div class="dashboard-layout">
+      <div class="dashboard-layout-title">📊 管理者ダッシュボード(4ペイン構成)</div>
+      <div class="dashboard-grid">
+        <div class="dashboard-cell">
+          <div class="cell-icon">🥧</div>
+          <div class="cell-name">ステータス別タスク数</div>
+          <div class="cell-type">Chart View (aggregate piechart)</div>
+        </div>
+        <div class="dashboard-cell">
+          <div class="cell-icon">📊</div>
+          <div class="cell-name">プロジェクト別進捗率</div>
+          <div class="cell-type">Chart View (col series)</div>
+        </div>
+        <div class="dashboard-cell">
+          <div class="cell-icon">📋</div>
+          <div class="cell-name">プロジェクト一覧</div>
+          <div class="cell-type">Table View</div>
+        </div>
+        <div class="dashboard-cell">
+          <div class="cell-icon">⚠️</div>
+          <div class="cell-name">期限超過タスク</div>
+          <div class="cell-type">Table View (Sliceベース)</div>
+        </div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ 本章で作るもの</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:200px;">ビュー名</th>
+          <th style="width:140px;">View type</th>
+          <th>役割</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;"><strong>ステータス別タスク数</strong></td><td>chart (aggregate piechart)</td><td style="text-align:left;">タスク全体のステータス分布を円グラフで表示</td></tr>
+        <tr><td>2</td><td style="text-align:left;"><strong>プロジェクト別進捗率</strong></td><td>chart (col series)</td><td style="text-align:left;">プロジェクトごとの進捗率を棒グラフで比較</td></tr>
+        <tr><td>3</td><td style="text-align:left;"><strong>期限超過タスク</strong></td><td>table (Slice)</td><td style="text-align:left;">期限を過ぎた未完了タスクを一覧表示</td></tr>
+        <tr><td>4</td><td style="text-align:left;"><strong>管理者ダッシュボード</strong></td><td>dashboard</td><td style="text-align:left;">上記3つ + プロジェクト一覧を1画面に統合</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">📌 上級編で新しく扱うポイント</div>
+      <ul>
+        <li><strong>Chart View</strong>:データを視覚的に表現するグラフビュー</li>
+        <li><strong>Dashboard View</strong>:複数のビューを1画面に並べて統合表示</li>
+        <li><strong>動的グルーピング</strong>:Chart の Group by 機能で自動集計</li>
+        <li><strong>Slice を使った絞り込みビュー</strong>:中級編で学んだ Slice の本格活用</li>
+      </ul>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-2 Chart Viewの基本 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-2">
+      <span class="sec-num">5-2</span> Chart Viewの基本 ─ 4種類のグラフタイプ
+    </h3>
+
+    <p>AppSheet の Chart View は、テーブルやSliceのデータをグラフ化する機能です。設定する Chart type によって、表示形式が変わります。</p>
+
+    <h4 class="sub-heading">■ よく使う4つの Chart type</h4>
+
+    <div class="view-type-grid">
+      <div class="view-type-card">
+        <div class="icon">🥧</div>
+        <div class="name">aggregate<br>piechart</div>
+        <div class="desc">集計付き円グラフ。<br>カテゴリ別の件数表示に最適</div>
+      </div>
+      <div class="view-type-card">
+        <div class="icon">📊</div>
+        <div class="name">col series</div>
+        <div class="desc">縦棒グラフ。<br>数値の大小比較に最適</div>
+      </div>
+      <div class="view-type-card">
+        <div class="icon">📈</div>
+        <div class="name">col series<br>[line]</div>
+        <div class="desc">折れ線グラフ。<br>時系列の推移表示に最適</div>
+      </div>
+      <div class="view-type-card">
+        <div class="icon">🎯</div>
+        <div class="name">histogram</div>
+        <div class="desc">ヒストグラム。<br>分布の可視化に使う</div>
+      </div>
+    </div>
+
+    <h4 class="sub-heading">■ Chart View の基本構成</h4>
+
+    <p>Chart View では、次の3つを指定するのが基本です。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:160px;">設定項目</th><th>役割</th></tr>
+      </thead>
+      <tbody>
+        <tr><td style="text-align:left;"><strong>For this data</strong></td><td style="text-align:left;">どのテーブル(またはSlice)のデータを使うか</td></tr>
+        <tr><td style="text-align:left;"><strong>Chart type</strong></td><td style="text-align:left;">グラフの形式(aggregate piechart / col series / line など)</td></tr>
+        <tr><td style="text-align:left;"><strong>Chart columns</strong></td><td style="text-align:left;">グラフ化するカラム(集計用と表示用)</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ Chart type の2つのグループ</h4>
+
+    <p>AppSheet の Chart type は、大きく <strong>「aggregate(集計あり)」</strong> と <strong>「通常(数値そのまま表示)」</strong> の2グループに分かれます。</p>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:200px;">グループ</th><th style="width:240px;">代表的なchart type</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr style="background:#fce4ec;">
+          <td style="text-align:left;"><strong>aggregate(集計あり)</strong></td>
+          <td style="text-align:left;">aggregate piechart / aggregate donutchart / histogram</td>
+          <td style="text-align:left;"><strong>カテゴリごとの件数を自動集計</strong>。Enum型カラムを指定可能</td>
+        </tr>
+        <tr>
+          <td style="text-align:left;">通常(集計なし)</td>
+          <td style="text-align:left;">piechart / donutchart / col series / row series / line</td>
+          <td style="text-align:left;">各行の数値カラムをそのまま表示。集計済みデータ用</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <div class="note-title">💡 集計したい場合は必ず「aggregate」を選ぶ</div>
+      「ステータス別の件数を円グラフで表示」のような <strong>カテゴリ集計</strong> をしたいときは、必ず <strong>aggregate piechart</strong> や <strong>aggregate donutchart</strong> を選びます。通常の「piechart」を選ぶと、Chart columns に数値カラムしか指定できず、Enum型のステータスを集計できません。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-3 ステータス別タスク数の円グラフ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-3">
+      <span class="sec-num">5-3</span> ステータス別タスク数の円グラフを作成
+    </h3>
+
+    <p>まずはシンプルな <strong>円グラフ</strong> から作ります。タスクテーブルのステータス(未着手/進行中/レビュー中/完了)ごとの件数を、円グラフで可視化します。</p>
+
+    <h4 class="sub-heading">■ ビューの設定</h4>
+
+    <div class="view-card">
+      <div class="view-title">🥧 ステータス別タスク数</div>
+      <dl class="view-spec">
+        <dt>View name</dt><dd><code>ステータス別タスク数</code></dd>
+        <dt>For this data</dt><dd>タスク</dd>
+        <dt>View type</dt><dd>chart</dd>
+        <dt>Position</dt><dd>ref(他のビューから参照される位置)</dd>
+        <dt>Chart type</dt><dd><strong>aggregate piechart</strong></dd>
+        <dt>Chart columns</dt><dd>ステータス</dd>
+        <dt>Label type</dt><dd>Value(件数表示) または Percent(%表示)</dd>
+        <dt>Show legend</dt><dd>ON</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>📱 Views → + Add View → Create a new view</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>次の通り設定します。</p>
+          <p>・<strong>View name</strong>:<code>ステータス別タスク数</code></p>
+          <p>・<strong>For this data</strong>:<code>タスク</code></p>
+          <p>・<strong>View type</strong>:<code>chart</code></p>
+          <p>・<strong>Position</strong>:<code>ref</code>(Dashboard内で使うため、メニューには出さない)</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>View Options</strong> セクションを展開し、<strong>Chart type</strong> から <strong>「aggregate piechart」</strong> を選択します(上段の集計グループにあります)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Chart columns</strong> で <strong>「ステータス」</strong> を選択します。aggregate piechart を選んだ後だけ、Enum型のステータスが選択肢に表示されます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Label type</strong> を選択します。<strong>Value</strong>(件数表示) / <strong>Percent</strong>(%表示) / <strong>Key</strong>(カラム名) から好みで選びます。本マニュアルでは <code>Value</code> を推奨。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p><strong>Show legend</strong> を <strong>ON</strong> にし、右上の <strong>Save</strong> をクリックします。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-03-01.png" alt="ステータス別タスク数の円グラフ">
+      <figcaption>図5-3-1:タスクのステータス分布を円グラフで表示</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 Position = ref とは?</div>
+      <strong>Position</strong> は「ビューがどこに表示されるか」を決める設定です。<code>menu</code> にすると下部メニューに表示されますが、<code>ref</code> にすると <strong>下部メニューには出さず、他のビュー(Dashboard等)から参照される時だけ表示</strong> されます。グラフ単体ではなく、ダッシュボードの一部として使いたいときに <code>ref</code> が便利です。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-4 プロジェクト別進捗率の棒グラフ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-4">
+      <span class="sec-num">5-4</span> プロジェクト別進捗率の棒グラフを作成
+    </h3>
+
+    <p>次は <strong>棒グラフ</strong> で、各プロジェクトの進捗率を比較できる形にします。第4章で作成した進捗率 Virtual Column を活用します。プロジェクトテーブルは各行がすでに集計済み(プロジェクト1行 = 1つの進捗率)なので、<strong>aggregate 系ではなく通常の「col series」</strong> を使います。</p>
+
+    <h4 class="sub-heading">■ ビューの設定</h4>
+
+    <div class="view-card">
+      <div class="view-title">📊 プロジェクト別進捗率</div>
+      <dl class="view-spec">
+        <dt>View name</dt><dd><code>プロジェクト別進捗率</code></dd>
+        <dt>For this data</dt><dd>プロジェクト</dd>
+        <dt>View type</dt><dd>chart</dd>
+        <dt>Position</dt><dd>ref</dd>
+        <dt>Chart type</dt><dd><strong>col series</strong>(縦棒グラフ)</dd>
+        <dt>Chart columns</dt><dd>進捗率</dd>
+        <dt>Show legend</dt><dd>ON</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>+ Add View → Create a new view</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>次の通り設定します。</p>
+          <p>・<strong>View name</strong>:<code>プロジェクト別進捗率</code></p>
+          <p>・<strong>For this data</strong>:<code>プロジェクト</code></p>
+          <p>・<strong>View type</strong>:<code>chart</code></p>
+          <p>・<strong>Position</strong>:<code>ref</code></p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>View Options で <strong>Chart type</strong> から <strong>「col series」</strong> を選択します(下段の通常グループにあります)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p><strong>Chart columns</strong> で <strong>「進捗率」</strong> を選択します。各プロジェクトの進捗率(数値カラム)が棒グラフのバーになります。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Show legend</strong> を <strong>ON</strong> にし、<strong>Save</strong> をクリック。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-04-01.png" alt="プロジェクト別進捗率の棒グラフ">
+      <figcaption>図5-4-1:プロジェクトごとの進捗率を縦棒グラフで比較</figcaption>
+    </figure>
+
+    <div class="note-box">
+      <div class="note-title">💡 aggregate系と通常系の使い分け</div>
+      <ul style="margin: 4px 0 0 20px;">
+        <li><strong>aggregate系(aggregate piechart など)</strong>:カテゴリカラム(Enum)を指定すると、AppSheetが自動で件数を集計してくれる。「ステータス別の件数」のような<strong>集計が必要</strong>な場合に使う</li>
+        <li><strong>通常系(col series / piechart など)</strong>:すでに集計済みの数値カラム(Virtual Columnなど)をそのまま表示する。「各プロジェクトの進捗率」のように<strong>集計不要</strong>な場合に使う</li>
+      </ul>
+      <p style="margin-top:8px;">本章では、5-3でステータス別の<strong>件数集計</strong>に aggregate piechart を使い、5-4でプロジェクト別の<strong>進捗率(集計済み)</strong>表示に col series を使い分けています。</p>
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-5 Dashboard View で統合 -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-5">
+      <span class="sec-num">5-5</span> Dashboard Viewで複数ビューを統合
+    </h3>
+
+    <p>ここまでで個別のChart Viewを2つ作成しました。これらと既存のビューを <strong>Dashboard View</strong> で1画面に統合します。</p>
+
+    <h4 class="sub-heading">■ 事前準備:期限超過タスクのSliceとビューを作成</h4>
+
+    <p>ダッシュボードに「期限超過タスク」のリストを表示するため、まず Slice を作ります。</p>
+
+    <h5 style="font-weight:700; color:#c62828; margin:18px 0 10px;">① 期限超過タスクのSlice作成</h5>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p>左メニューの <strong>Data</strong> から <strong>タスク</strong> テーブルを開きます。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>左パネルの <strong>タスク</strong> テーブル名の右に表示される <strong>「+」</strong> アイコン(マウスホバー時に出現)をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p><strong>「Add a new slice for the "タスク" table」</strong> ダイアログが開きます。Suggestionsは無視し、下部の <strong>「Create a new slice for タスク」</strong> ボタン(青いボタン)をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>新規Slice作成画面が開くので、次の通り設定します。</p>
+          <p>・<strong>Slice name</strong>:<code>期限超過タスク</code></p>
+          <p>・<strong>Source table</strong>:<code>タスク</code>(自動設定済み)</p>
+          <p>・<strong>Row filter condition</strong>:下記の式を入力</p>
+<pre><code>AND(
+  [残日数] &lt; 0,
+  [ステータス] &lt;&gt; "完了"
+)</code></pre>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p>右上の <strong>Save</strong> をクリックして保存します。</p>
+        </div>
+      </div>
+    </div>
+
+    <h5 style="font-weight:700; color:#c62828; margin:18px 0 10px;">② 期限超過タスクビューを作成</h5>
+
+    <div class="view-card">
+      <div class="view-title">⚠️ 期限超過タスク</div>
+      <dl class="view-spec">
+        <dt>View name</dt><dd><code>期限超過タスク</code></dd>
+        <dt>For this data</dt><dd>期限超過タスク(Slice)</dd>
+        <dt>View type</dt><dd>table</dd>
+        <dt>Position</dt><dd>ref</dd>
+        <dt>Sort by</dt><dd>期限(Ascending)</dd>
+        <dt>Column order</dt><dd>タスク名 / プロジェクトID / 担当者 / 期限 / 残日数</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ Dashboard View の作成</h4>
+
+    <div class="view-card">
+      <div class="view-title">📊 管理者ダッシュボード</div>
+      <dl class="view-spec">
+        <dt>View name</dt><dd><code>管理者ダッシュボード</code></dd>
+        <dt>For this data</dt><dd>(Dashboard では不要)</dd>
+        <dt>View type</dt><dd>dashboard</dd>
+        <dt>Position</dt><dd>menu(下部メニューに表示)</dd>
+        <dt>View entries</dt><dd>下記の4ビューを配置</dd>
+      </dl>
+    </div>
+
+    <h4 class="sub-heading">■ 作成手順</h4>
+
+    <div class="procedure">
+      <div class="proc-step">
+        <div class="proc-num">1</div>
+        <div class="proc-body">
+          <p><strong>+ Add View → Create a new view</strong> をクリックします。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">2</div>
+        <div class="proc-body">
+          <p>次の通り設定します。</p>
+          <p>・<strong>View name</strong>:<code>管理者ダッシュボード</code></p>
+          <p>・<strong>View type</strong>:<code>dashboard</code></p>
+          <p>・<strong>Position</strong>:<code>menu</code></p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">3</div>
+        <div class="proc-body">
+          <p>View Options の <strong>View entries</strong> で <strong>「+」</strong> をクリックし、ダッシュボードに含める4つのビューを順に追加します。</p>
+          <p>① <strong>ステータス別タスク数</strong></p>
+          <p>② <strong>プロジェクト別進捗率</strong></p>
+          <p>③ <strong>プロジェクト一覧</strong>(第4章で作成済)</p>
+          <p>④ <strong>期限超過タスク</strong></p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">4</div>
+        <div class="proc-body">
+          <p>各ビューエントリの右側に表示されるドロップダウンで、<strong>表示サイズ</strong>(Large / Wide / Tall / Small)を選択できます。今回のおすすめ設定は次の通りです:</p>
+          <p>① <strong>ステータス別タスク数</strong> → <code>Small</code>(円グラフはコンパクトでも見やすい)</p>
+          <p>② <strong>プロジェクト別進捗率</strong> → <code>Wide</code>(棒グラフは横長が見やすい)</p>
+          <p>③ <strong>プロジェクト一覧</strong> → <code>Large</code>(カラム数が多いのでメインコンテンツとして大きく)</p>
+          <p>④ <strong>期限超過タスク</strong> → <code>Wide</code>(テーブルは横長表示)</p>
+          <p style="margin-top:10px; padding:10px 14px; background:#fdf0f3; border:1px solid #f48fb1; border-radius:6px; font-size:13px;">📐 <strong>サイズの意味:</strong><br>
+          ・<strong>Small</strong>:コンパクト表示(縦横ともに小さい)<br>
+          ・<strong>Wide</strong>:横長表示(棒グラフ・テーブル向け)<br>
+          ・<strong>Tall</strong>:縦長表示(リスト・縦に長いコンテンツ向け)<br>
+          ・<strong>Large</strong>:大きく表示(メインコンテンツ向け)</p>
+          <p style="margin-top:8px; padding:10px 14px; background:#f1f9f1; border-left:3px solid #4caf50; border-radius:0 6px 6px 0; font-size:13px;">💡 <strong>最初は全部 Large のままでもOKです。</strong> プレビューで動作を確認してから、見やすさに応じてサイズを調整するのが効率的です。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">5</div>
+        <div class="proc-body">
+          <p><strong>Use tabs in mobile view</strong> をオンにすると、スマホで開いたときにタブ切り替え式の表示になります(画面が狭いとき向け)。</p>
+        </div>
+      </div>
+      <div class="proc-step">
+        <div class="proc-num">6</div>
+        <div class="proc-body">
+          <p><strong>Save</strong> をクリック。プレビューの下部メニューに <strong>「管理者ダッシュボード」</strong> アイコンが追加されているはずです。</p>
+        </div>
+      </div>
+    </div>
+
+    <figure class="figure">
+      <img src="images/ch05-05-01.png" alt="管理者ダッシュボードの完成画面">
+      <figcaption>図5-5-1:管理者ダッシュボード ─ 4つのビューを1画面に統合</figcaption>
+    </figure>
+
+    <div class="point-box">
+      <div class="point-title">📌 Dashboard の便利な機能 ─ Interactive モード</div>
+      Dashboard View には <strong>Interactive mode</strong> という機能があります。これをオンにすると、<strong>1つのビューで行を選択したときに、他のビューが連動して絞り込まれる</strong> ようになります。たとえば左の円グラフで「進行中」をクリックすると、右の一覧が進行中のタスクだけに絞られる、といった操作ができます。
+      <p style="margin-top:6px;">設定場所:Dashboard View の Options → <strong>Interactive mode</strong> をON。</p>
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ Position = ref のビューは Dashboard 内のみで表示</div>
+      ステータス別タスク数・プロジェクト別進捗率・期限超過タスクの3つは Position を <strong>ref</strong> にしているため、下部メニューには表示されません。これらはダッシュボードの構成要素として配置するためのビューです。
+    </div>
+
+
+    <!-- ============================================================ -->
+    <!-- 5-6 動作確認とまとめ -->
+    <!-- ============================================================ -->
+    <h3 class="section-heading" id="sec5-6">
+      <span class="sec-num">5-6</span> 動作確認とまとめ
+    </h3>
+
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+
+    <ul class="checklist">
+      <li><strong>ステータス別タスク数</strong>(Chart View / pie)が作成されている</li>
+      <li><strong>プロジェクト別進捗率</strong>(Chart View / column)が作成されている</li>
+      <li><strong>期限超過タスク</strong>のSliceとビュー(table)が作成されている</li>
+      <li><strong>管理者ダッシュボード</strong>(Dashboard View)が作成され、下部メニューに表示されている</li>
+      <li>管理者ダッシュボードを開くと、4つのビューが1画面に表示される</li>
+      <li>ステータス別タスク数の円グラフが正しく表示されている(未着手3 / 進行中5 / レビュー中1 / 完了3)</li>
+      <li>プロジェクト別進捗率の棒グラフで、P004が100、P001が20など正しい値が表示される</li>
+      <li>期限超過タスクには、期限を過ぎた未完了タスクのみが表示される(現在の日付に応じて0件の場合もある)</li>
+    </ul>
+
+
+    <h4 class="sub-heading">■ この章で作成したビュー一覧</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr>
+          <th style="width:50px;">No.</th>
+          <th style="width:200px;">ビュー名</th>
+          <th style="width:140px;">View type</th>
+          <th style="width:80px;">Position</th>
+          <th>役割</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">ステータス別タスク数</td><td>chart (aggregate piechart)</td><td>ref</td><td style="text-align:left;">タスクのステータス分布を可視化</td></tr>
+        <tr><td>2</td><td style="text-align:left;">プロジェクト別進捗率</td><td>chart (col series)</td><td>ref</td><td style="text-align:left;">プロジェクト毎の進捗率を比較</td></tr>
+        <tr><td>3</td><td style="text-align:left;">期限超過タスク</td><td>table (Slice)</td><td>ref</td><td style="text-align:left;">期限超過の未完了タスクを抽出</td></tr>
+        <tr><td>4</td><td style="text-align:left;">管理者ダッシュボード</td><td>dashboard</td><td>menu</td><td style="text-align:left;">上記3つ + プロジェクト一覧を統合</td></tr>
+      </tbody>
+    </table>
+
+    <h4 class="sub-heading">■ 第5章のまとめ(中級編との違い)</h4>
+
+    <table class="data-table left-align">
+      <thead>
+        <tr><th style="width:60px;">No.</th><th style="width:260px;">上級編で新しく扱ったポイント</th><th>使った仕組み</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">グラフによる可視化</td><td>Chart View (pie / column)</td></tr>
+        <tr><td>2</td><td style="text-align:left;">自動集計</td><td>Group aggregate (COUNT / SUM)</td></tr>
+        <tr><td>3</td><td style="text-align:left;">複数ビューの統合</td><td>Dashboard View + View entries</td></tr>
+        <tr><td>4</td><td style="text-align:left;">Sliceを使った業務ビュー</td><td>期限超過タスクの抽出</td></tr>
+        <tr><td>5</td><td style="text-align:left;">表示位置の使い分け</td><td>Position: menu / ref の使い分け</td></tr>
+      </tbody>
+    </table>
+
+    <div class="point-box">
+      <div class="point-title">💡 POINT ─ この章の学びを振り返り</div>
+      上級編らしい <strong>業務ダッシュボード</strong> を構築しました。第4章で作った Virtual Column と組み合わせることで、<strong>「見るだけで状況が分かる」管理画面</strong> が完成します。次の第6章では、<strong>条件付き書式とUXの仕上げ</strong> を扱い、優先度や期限の色分け、アイコン設定でアプリの完成度を高めます。
+    </div>
+
+    <div class="warn-box">
+      <div class="warn-title">⚠️ 次の章に進む前に</div>
+      管理者ダッシュボードが想定通りに表示されることを確認してください。グラフが空欄になる場合は、第4章のVirtual Column(進捗率など)が正しく動作しているか再確認しましょう。
+    </div>
+
+    <!-- ページナビ -->
+    <nav class="page-nav">
+      <a href="chapter04.html">← 第4章:高度な関数とVirtual Column</a>
+      <a href="chapter06.html">第6章:条件付き書式とUXの仕上げ →</a>
+    </nav>
+
+  </main>
+
+  <footer class="site-footer">
+    AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新:2026年4月
+  </footer>
+
+</div>
+
+</body>
+</html>

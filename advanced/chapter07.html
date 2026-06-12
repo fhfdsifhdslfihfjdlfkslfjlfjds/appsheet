@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AppSheet 上級編 ― 第7章:Sliceの応用と動的フィルタ</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'メイリオ', Meiryo, 'Hiragino Kaku Gothic ProN', sans-serif; font-size: 15px; line-height: 1.85; color: #333; background: #f4f6f9; }
+  .page-wrapper { max-width: 960px; margin: 0 auto; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,.08); min-height: 100vh; }
+  .site-header { background: linear-gradient(135deg, #c62828 0%, #ef5350 100%); color: #fff; padding: 28px 40px 24px; }
+  .site-header .manual-label { font-size: 13px; letter-spacing: .12em; opacity: .85; margin-bottom: 4px; }
+  .site-header h1 { font-size: 26px; font-weight: 700; letter-spacing: .04em; }
+  .site-header h1 small { font-size: 15px; font-weight: 400; opacity: .9; margin-left: 8px; }
+  .breadcrumb { background: #fce4ec; padding: 10px 40px; font-size: 13px; color: #666; }
+  .breadcrumb a { color: #c62828; text-decoration: none; }
+  .breadcrumb a:hover { text-decoration: underline; }
+  .breadcrumb .sep { margin: 0 6px; color: #aaa; }
+  .content { padding: 36px 40px 60px; }
+  .chapter-title-block { background: linear-gradient(135deg, #fce4ec 0%, #fdf0f3 100%); border: 1px solid #f48fb1; border-radius: 10px; padding: 32px 36px; margin-bottom: 40px; text-align: center; }
+  .chapter-number { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background: #c62828; color: #fff; border-radius: 50%; font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+  .chapter-title-block h2 { font-size: 24px; color: #c62828; font-weight: 700; margin-bottom: 6px; }
+  .chapter-title-block .chapter-sub { font-size: 14px; color: #666; }
+  .progress-bar-wrapper { margin-bottom: 36px; }
+  .progress-steps { display: flex; justify-content: space-between; position: relative; }
+  .progress-steps::before { content: ''; position: absolute; top: 16px; left: 24px; right: 24px; height: 3px; background: #d4dce8; z-index: 0; }
+  .progress-step { display: flex; flex-direction: column; align-items: center; z-index: 1; min-width: 48px; }
+  .progress-step .dot { width: 34px; height: 34px; border-radius: 50%; background: #d4dce8; color: #fff; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-bottom: 6px; }
+  .progress-step.active .dot { background: #c62828; box-shadow: 0 0 0 4px rgba(198,40,40,.2); }
+  .progress-step.done .dot { background: #ef5350; }
+  .progress-step .label { font-size: 11px; color: #888; text-align: center; }
+  .progress-step.active .label { color: #c62828; font-weight: 700; }
+  .progress-step.done .label { color: #ef5350; }
+  .toc-box { border: 1px solid #f48fb1; border-radius: 10px; padding: 28px 32px; margin-bottom: 44px; background: #fff; }
+  .toc-box-title { text-align: center; font-size: 17px; color: #c62828; font-weight: 700; margin-bottom: 20px; }
+  .toc-box-title span.sub { font-weight: 400; font-size: 13px; color: #888; }
+  .toc-list { list-style: none; }
+  .toc-list li { border-bottom: 1px solid #eaeef4; }
+  .toc-list li:last-child { border-bottom: none; }
+  .toc-list a { display: flex; align-items: center; padding: 14px 12px; text-decoration: none; color: #333; transition: background .15s; border-radius: 6px; }
+  .toc-list a:hover { background: #fdf0f3; }
+  .toc-num { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #c62828; color: #fff; border-radius: 50%; font-size: 14px; font-weight: 700; margin-right: 16px; flex-shrink: 0; }
+  .toc-text { flex: 1; font-size: 15px; }
+  .toc-text strong { color: #c62828; }
+  .toc-arrow { color: #c62828; font-size: 18px; margin-left: 8px; }
+  .section-heading { font-size: 21px; color: #c62828; font-weight: 700; margin: 52px 0 20px; padding-bottom: 10px; border-bottom: 3px solid #c62828; }
+  .section-heading .sec-num { background: #c62828; color: #fff; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; font-size: 15px; font-weight: 700; margin-right: 10px; vertical-align: middle; }
+  .sub-heading { font-size: 17px; color: #ef5350; font-weight: 700; margin: 32px 0 14px; padding-left: 14px; border-left: 4px solid #ef5350; }
+  .content p { margin-bottom: 16px; }
+  .procedure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; padding: 24px 24px 16px; margin: 20px 0 28px; }
+  .proc-step { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid #f8bbd0; }
+  .proc-step:last-child { border-bottom: none; }
+  .proc-num { width: 32px; height: 32px; background: #c62828; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .proc-body { flex: 1; }
+  .proc-body p { margin-bottom: 4px; line-height: 1.6; }
+  .proc-body p:last-child { margin-bottom: 0; }
+  .data-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+  .data-table th { background: #c62828; color: #fff; padding: 10px 14px; font-weight: 700; text-align: center; white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid #e0e6ef; text-align: center; }
+  .data-table tbody tr:hover { background: #fdf0f3; }
+  .data-table.left-align td { text-align: left; }
+  .data-table.left-align td:first-child { text-align: center; font-weight: 700; }
+  code { background: #fce4ec; padding: 2px 7px; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 13px; color: #c62828; }
+  pre { background: #23272e; color: #f8f8f2; padding: 14px 20px; border-radius: 8px; overflow-x: auto; font-size: 13px; line-height: 1.7; margin: 10px 0 16px; }
+  pre code { background: none; color: inherit; padding: 0; }
+  .slice-card { background: #fff; border: 2px solid #f48fb1; border-radius: 12px; padding: 22px 26px; margin: 22px 0; }
+  .slice-card .slice-title { font-size: 17px; font-weight: 700; color: #c62828; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px dashed #f48fb1; }
+  .slice-card .slice-spec { display: grid; grid-template-columns: 160px 1fr; gap: 8px 12px; font-size: 13px; }
+  .slice-card .slice-spec dt { font-weight: 700; color: #555; }
+  .figure { margin: 24px 0; text-align: center; }
+  .figure img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #d4dce8; }
+  .figure figcaption { font-size: 13px; color: #888; margin-top: 8px; }
+  .preview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+  .preview-figure { background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 10px; padding: 16px; margin: 0; text-align: center; }
+  .preview-figure img { width: 100%; border-radius: 8px; border: 1px solid #f48fb1; margin-bottom: 10px; }
+  .preview-figure figcaption { font-size: 13px; color: #888; margin-top: 4px; line-height: 1.6; }
+  .checklist { list-style: none; margin: 16px 0 24px; padding: 20px 24px; background: #fdf0f3; border: 1px solid #f48fb1; border-radius: 8px; }
+  .checklist li { padding: 8px 0 8px 28px; position: relative; font-size: 14px; }
+  .checklist li::before { content: '☐'; position: absolute; left: 0; font-size: 16px; color: #c62828; }
+  .note-box { border-left: 5px solid #4caf50; background: #f1f9f1; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .note-box .note-title { font-weight: 700; color: #388e3c; margin-bottom: 6px; font-size: 15px; }
+  .warn-box { border-left: 5px solid #f9a825; background: #fefce8; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .warn-box .warn-title { font-weight: 700; color: #e68a00; margin-bottom: 6px; font-size: 15px; }
+  .point-box { border-left: 5px solid #c62828; background: #fce4ec; border-radius: 0 8px 8px 0; padding: 18px 22px; margin: 22px 0; font-size: 14px; }
+  .point-box .point-title { font-weight: 700; color: #c62828; margin-bottom: 6px; font-size: 15px; }
+  .point-box ul { margin: 4px 0 0 20px; }
+  .point-box li { margin-bottom: 4px; }
+  .page-nav { display: flex; justify-content: space-between; margin-top: 52px; padding-top: 24px; border-top: 2px solid #e0e6ef; }
+  .page-nav a { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #c62828; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 700; transition: background .15s; }
+  .page-nav a:hover { background: #8e0000; }
+  .site-footer { background: #f4f6f9; text-align: center; padding: 20px; font-size: 12px; color: #999; border-top: 1px solid #e0e6ef; }
+  @media print { body { background: #fff; } .page-wrapper { box-shadow: none; } .page-nav, .progress-bar-wrapper { display: none; } }
+</style>
+</head>
+<body>
+<div class="page-wrapper">
+  <header class="site-header">
+    <div class="manual-label">社内マニュアル ─ ノーコードツール活用シリーズ</div>
+    <h1>AppSheet 上級編 <small>～ プロのアプリ設計を学ぼう ～</small></h1>
+  </header>
+  <nav class="breadcrumb">
+    <a href="../index.html">トップ</a><span class="sep">▸</span><a href="../index.html">上級編</a><span class="sep">▸</span><strong>第7章:Sliceの応用と動的フィルタ</strong>
+  </nav>
+  <main class="content">
+    <div class="chapter-title-block">
+      <div class="chapter-number">7</div>
+      <h2>Sliceの応用と動的フィルタ</h2>
+      <div class="chapter-sub">フィルタ編 ─ ユーザー・日付・ステータスで動的にデータを絞り込む</div>
+    </div>
+    <div class="progress-bar-wrapper">
+      <div class="progress-steps">
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">概要</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">複合Ref</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Security</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">高度関数</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">Dashboard</div></div>
+        <div class="progress-step done"><div class="dot">✓</div><div class="label">書式UX</div></div>
+        <div class="progress-step active"><div class="dot">7</div><div class="label">Slice応用</div></div>
+        <div class="progress-step"><div class="dot">8</div><div class="label">運用設計</div></div>
+        <div class="progress-step"><div class="dot">9</div><div class="label">総まとめ</div></div>
+      </div>
+    </div>
+    <div class="toc-box">
+      <div class="toc-box-title">📖 目次 <span class="sub">（クリックで各節へジャンプできます）</span></div>
+      <ul class="toc-list">
+        <li><a href="#sec7-1"><span class="toc-num">7-1</span><span class="toc-text"><strong>Sliceの応用 ─ 中級編との違いと設計方針</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-2"><span class="toc-num">7-2</span><span class="toc-text"><strong>「マイタスク」Slice ─ ログインユーザーの担当のみ</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-3"><span class="toc-num">7-3</span><span class="toc-text"><strong>「今週の期限タスク」Slice ─ 日付の動的フィルタ</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-4"><span class="toc-num">7-4</span><span class="toc-text"><strong>「進行中プロジェクト」Slice ─ ステータスフィルタ</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-5"><span class="toc-num">7-5</span><span class="toc-text"><strong>Sliceベースのビューを配置する</strong></span><span class="toc-arrow">▸</span></a></li>
+        <li><a href="#sec7-6"><span class="toc-num">7-6</span><span class="toc-text"><strong>動作確認とまとめ</strong></span><span class="toc-arrow">▸</span></a></li>
+      </ul>
+    </div>
+
+    <h3 class="section-heading" id="sec7-1"><span class="sec-num">7-1</span> Sliceの応用 ─ 中級編との違いと設計方針</h3>
+    <p>Slice は中級編で「申請中の休暇だけ表示する」という形で学びました。上級編では、<strong>ログインユーザー・日付・ステータスを組み合わせた複合条件</strong> で、より実用的な絞り込みを実現します。</p>
+    <h4 class="sub-heading">■ 中級編との違い</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:140px;">レベル</th><th style="width:220px;">Sliceの使い方</th><th>条件の例</th></tr></thead>
+      <tbody>
+        <tr><td>中級編</td><td style="text-align:left;">固定条件で絞り込み</td><td style="text-align:left;"><code>[承認ステータス] = "申請中"</code></td></tr>
+        <tr style="background:#fce4ec;"><td><strong>上級編</strong></td><td style="text-align:left;"><strong>動的条件(関数)で絞り込み</strong></td><td style="text-align:left;"><code>USEREMAIL()</code> や <code>TODAY()</code> を条件に使用</td></tr>
+      </tbody>
+    </table>
+    <h4 class="sub-heading">■ Security Filter と Slice の使い分け(復習)</h4>
+    <p>第3章で Security Filter を設定しましたが、Slice との違いをあらためて整理します。</p>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:140px;">比較項目</th><th>Security Filter(第3章)</th><th>Slice(本章)</th></tr></thead>
+      <tbody>
+        <tr><td style="text-align:left;">目的</td><td style="text-align:left;"><strong>アクセス制御</strong>(見せてはいけないデータを隠す)</td><td style="text-align:left;"><strong>便利な表示</strong>(見たいデータを絞り込む)</td></tr>
+        <tr><td style="text-align:left;">適用範囲</td><td style="text-align:left;">テーブル全体(全ビュー共通)</td><td style="text-align:left;">Sliceベースのビューのみ</td></tr>
+        <tr><td style="text-align:left;">セキュリティ</td><td style="text-align:left;">強い(迂回不可)</td><td style="text-align:left;">補助的(迂回可能)</td></tr>
+        <tr><td style="text-align:left;">本マニュアルでの使い方</td><td style="text-align:left;">メンバーは自分の担当タスクのみ(強制)</td><td style="text-align:left;">「今週の期限」「進行中のみ」など(便利機能)</td></tr>
+      </tbody>
+    </table>
+    <h4 class="sub-heading">■ 本章で作る3つの Slice</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:50px;">No.</th><th style="width:190px;">Slice名</th><th style="width:130px;">テーブル</th><th>条件の特徴</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;"><strong>マイタスク</strong></td><td>タスク</td><td style="text-align:left;">USEREMAIL()で自分の担当 + 未完了のみ</td></tr>
+        <tr><td>2</td><td style="text-align:left;"><strong>今週の期限タスク</strong></td><td>タスク</td><td style="text-align:left;">TODAY()で今週の期限のタスクを動的抽出</td></tr>
+        <tr><td>3</td><td style="text-align:left;"><strong>進行中プロジェクト</strong></td><td>プロジェクト</td><td style="text-align:left;">ステータス=進行中のプロジェクトのみ</td></tr>
+      </tbody>
+    </table>
+    <div class="note-box"><div class="note-title">💡 第5章で作った「期限超過タスク」Sliceも活用中</div>第5章で作成した <strong>期限超過タスク</strong> Slice は既にダッシュボードに組み込まれています。本章で作る Slice と合わせて、合計 <strong>4つの Slice</strong> がアプリに搭載されることになります。</div>
+    <div class="point-box"><div class="point-title">📌 上級編の Slice 設計方針</div><ul><li><strong>「誰の」「いつの」「どの状態の」</strong>データを見たいかを明確にしてから Slice を作る</li><li>Slice 名は <strong>「誰が見ても意味がわかる名前」</strong> にする(例:「マイタスク」「今週の期限タスク」)</li><li><strong>Security Filter で制御すべきもの</strong>(権限)と <strong>Slice で絞り込むもの</strong>(利便性)を混同しない</li></ul></div>
+
+    <h3 class="section-heading" id="sec7-2"><span class="sec-num">7-2</span> 「マイタスク」Slice ─ ログインユーザーの担当のみ</h3>
+    <p>ログインしているメンバーが <strong>自分の担当で、かつまだ完了していないタスク</strong> だけを見られる Slice を作ります。「今日やるべきこと」を確認する画面に最適です。</p>
+    <div class="slice-card">
+      <div class="slice-title">📋 マイタスク</div>
+      <dl class="slice-spec">
+        <dt>Slice name</dt><dd><code>マイタスク</code></dd>
+        <dt>Source table</dt><dd>タスク</dd>
+        <dt>Row filter condition</dt><dd>下記</dd>
+        <dt>用途</dt><dd>ログインユーザーの担当＋未完了のタスクのみ</dd>
+      </dl>
+<pre><code>AND(
+  [担当者].[メールアドレス] = USEREMAIL(),
+  [ステータス] &lt;&gt; "完了"
+)</code></pre>
+    </div>
+    <h4 class="sub-heading">■ 条件式の解説</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:60px;">No.</th><th style="width:310px;">条件</th><th>意味</th></tr></thead>
+      <tbody>
+        <tr><td>①</td><td style="text-align:left;"><code>[担当者].[メールアドレス] = USEREMAIL()</code></td><td style="text-align:left;">タスクの担当者が、今ログインしている人</td></tr>
+        <tr><td>②</td><td style="text-align:left;"><code>[ステータス] &lt;&gt; "完了"</code></td><td style="text-align:left;">かつ、ステータスが「完了」ではない(未着手・進行中・レビュー中)</td></tr>
+      </tbody>
+    </table>
+    <h4 class="sub-heading">■ 作成手順</h4>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p>左メニューの <strong>Data</strong> から <strong>タスク</strong> テーブルを開き、テーブル名の右に表示される <strong>「+」</strong> アイコンをクリックします。</p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p><strong>「Create a new slice for タスク」</strong> ボタン(青いボタン)をクリックします。</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p>次の通り設定します。</p><p>・<strong>Slice name</strong>:<code>マイタスク</code></p><p>・<strong>Row filter condition</strong>:上記の AND 式を入力</p></div></div>
+      <div class="proc-step"><div class="proc-num">4</div><div class="proc-body"><p><strong>Save</strong> をクリック。</p></div></div>
+    </div>
+    <figure class="figure"><img src="images/ch07-02-01.png" alt="マイタスクSliceの設定画面"><figcaption>図7-2-1:マイタスク Slice の Row filter condition 設定</figcaption></figure>
+    <div class="point-box"><div class="point-title">📌 Security Filter との違い</div>第3章の Security Filter でも「メンバーは自分のタスクだけ」の制御を実装しましたが、あちらは <strong>管理者には全件を表示</strong> する仕組みでした。この「マイタスク」Slice は、<strong>管理者がアクセスしても自分の担当だけに絞り込まれる</strong> 点が異なります。管理者が「自分のタスクだけ確認したい」時に便利です。</div>
+    <div class="warn-box"><div class="warn-title">⚠️ テスト時の注意</div>第3章と同じく、<code>USEREMAIL()</code> を使った Slice をテストする際は、Security Filter の式と同様に <strong>USEREMAIL() の部分をテスト用のメールアドレスに一時的に書き換える</strong> 必要があります。テスト後は必ず <code>USEREMAIL()</code> に戻してください。</div>
+
+    <h3 class="section-heading" id="sec7-3"><span class="sec-num">7-3</span> 「今週の期限タスク」Slice ─ 日付の動的フィルタ</h3>
+    <p><strong>期限が今日から7日以内</strong> のタスクだけを表示する Slice を作ります。これにより、直近で対応が必要なタスクだけに集中できます。</p>
+    <div class="slice-card">
+      <div class="slice-title">📅 今週の期限タスク</div>
+      <dl class="slice-spec">
+        <dt>Slice name</dt><dd><code>今週の期限タスク</code></dd>
+        <dt>Source table</dt><dd>タスク</dd>
+        <dt>Row filter condition</dt><dd>下記</dd>
+        <dt>用途</dt><dd>今日から7日以内に期限が来る未完了タスク</dd>
+      </dl>
+<pre><code>AND(
+  [ステータス] &lt;&gt; "完了",
+  [残日数] &gt;= 0,
+  [残日数] &lt;= 7
+)</code></pre>
+    </div>
+    <h4 class="sub-heading">■ 条件式の解説</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:60px;">No.</th><th style="width:260px;">条件</th><th>意味</th></tr></thead>
+      <tbody>
+        <tr><td>①</td><td style="text-align:left;"><code>[ステータス] &lt;&gt; "完了"</code></td><td style="text-align:left;">完了済みは除外</td></tr>
+        <tr><td>②</td><td style="text-align:left;"><code>[残日数] &gt;= 0</code></td><td style="text-align:left;">期限超過は除外(第5章のSliceと重複しないように)</td></tr>
+        <tr><td>③</td><td style="text-align:left;"><code>[残日数] &lt;= 7</code></td><td style="text-align:left;">期限まで7日以内</td></tr>
+      </tbody>
+    </table>
+    <p>条件②で <code>[残日数] >= 0</code> としているのは、<strong>第5章で作成した「期限超過タスク」Slice(残日数 < 0)との棲み分け</strong> のためです。期限超過はダッシュボードに表示済みなので、こちらでは「まだ間に合うけど急ぎ」のタスクだけを抽出します。</p>
+    <h4 class="sub-heading">■ 作成手順</h4>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p><strong>Data → タスク → 「+」 → 「Create a new slice for タスク」</strong></p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p><strong>Slice name</strong>:<code>今週の期限タスク</code></p><p><strong>Row filter condition</strong>:上記のAND式を入力</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p><strong>Save</strong></p></div></div>
+    </div>
+    <div class="note-box"><div class="note-title">💡 Virtual Column [残日数] のおかげで式がシンプルに</div>第4章で <code>[残日数]</code> Virtual Column を作っていなければ、この Slice の条件式は <code>AND([期限] >= TODAY(), [期限] <= TODAY() + 7, ...)</code> のように冗長になっていました。<strong>Virtual Column であらかじめ計算しておくと、Slice の条件式がシンプルになる</strong> というのが上級編の設計テクニックです。</div>
+
+    <h3 class="section-heading" id="sec7-4"><span class="sec-num">7-4</span> 「進行中プロジェクト」Slice ─ ステータスフィルタ</h3>
+    <p>プロジェクト一覧から <strong>完了・中止のプロジェクトを除外</strong> し、現在アクティブなプロジェクトだけを表示する Slice を作ります。</p>
+    <div class="slice-card">
+      <div class="slice-title">🚀 進行中プロジェクト</div>
+      <dl class="slice-spec">
+        <dt>Slice name</dt><dd><code>進行中プロジェクト</code></dd>
+        <dt>Source table</dt><dd>プロジェクト</dd>
+        <dt>Row filter condition</dt><dd>下記</dd>
+        <dt>用途</dt><dd>ステータスが「計画中」または「進行中」のプロジェクトのみ</dd>
+      </dl>
+<pre><code>OR(
+  [ステータス] = "計画中",
+  [ステータス] = "進行中"
+)</code></pre>
+    </div>
+    <h4 class="sub-heading">■ なぜ「<> 完了 AND <> 中止」ではなく OR で書くのか</h4>
+    <p>この条件は2通りの書き方ができます。</p>
+<pre><code>// 書き方A: 表示したいステータスを列挙(OR) ← おすすめ
+OR([ステータス] = "計画中", [ステータス] = "進行中")
+
+// 書き方B: 除外したいステータスを列挙(AND + NOT)
+AND([ステータス] &lt;&gt; "完了", [ステータス] &lt;&gt; "中止")</code></pre>
+    <p>どちらでも結果は同じですが、<strong>書き方Aの方がおすすめ</strong>です。理由は、将来ステータスの選択肢が増えた場合(例:「保留」を追加)に、書き方Bでは新しいステータスが自動的に表示されてしまいます。<strong>「見せたいものだけ明示する」ほうが安全</strong>です。</p>
+    <h4 class="sub-heading">■ 作成手順</h4>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p><strong>Data → プロジェクト → 「+」 → 「Create a new slice for プロジェクト」</strong></p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p><strong>Slice name</strong>:<code>進行中プロジェクト</code></p><p><strong>Row filter condition</strong>:上記のOR式を入力</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p><strong>Save</strong></p></div></div>
+    </div>
+
+    <h3 class="section-heading" id="sec7-5"><span class="sec-num">7-5</span> Sliceベースのビューを配置する</h3>
+    <p>3つの Slice を作成したら、それぞれを <strong>ビューとして画面に配置</strong> します。Slice を作っただけではアプリ画面には表示されないため、この手順が必要です。</p>
+    <h4 class="sub-heading">■ 作成するビュー</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:50px;">No.</th><th style="width:190px;">View name</th><th style="width:190px;">For this data</th><th style="width:90px;">View type</th><th style="width:90px;">Position</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">マイタスク</td><td style="text-align:left;">マイタスク(Slice)</td><td>table</td><td>menu</td></tr>
+        <tr><td>2</td><td style="text-align:left;">今週の期限タスク</td><td style="text-align:left;">今週の期限タスク(Slice)</td><td>table</td><td>ref</td></tr>
+        <tr><td>3</td><td style="text-align:left;">進行中プロジェクト</td><td style="text-align:left;">進行中プロジェクト(Slice)</td><td>table</td><td>ref</td></tr>
+      </tbody>
+    </table>
+    <h4 class="sub-heading">■ ① マイタスクビューの作成</h4>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p><strong>📱 Views → + Add View → Create a new view</strong></p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p>・<strong>View name</strong>:<code>マイタスク</code></p><p>・<strong>For this data</strong>:<code>マイタスク</code>(Sliceを選択 ─ テーブルではなく Slice 名を選んでください)</p><p>・<strong>View type</strong>:<code>table</code></p><p>・<strong>Position</strong>:<code>menu</code>(下部メニューに表示)</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p><strong>Column order</strong> で表示カラムを追加します。おすすめの順番:</p><p><code>タスク名 → プロジェクトID → 優先度 → ステータス → 期限 → 期限ステータス</code></p></div></div>
+      <div class="proc-step"><div class="proc-num">4</div><div class="proc-body"><p><strong>Sort by</strong>: 期限(Ascending)に設定し、<strong>Save</strong></p></div></div>
+    </div>
+    <div class="warn-box"><div class="warn-title">⚠️ 「For this data」でテーブルではなくSliceを選ぶ</div>ビュー作成時の <strong>For this data</strong> ドロップダウンには、テーブル名と Slice 名の両方が表示されます。ここで <strong>「タスク」(テーブル)ではなく「マイタスク」(Slice)</strong> を選んでください。テーブルを選ぶと、Slice のフィルター条件が適用されず全件が表示されてしまいます。</div>
+    <h4 class="sub-heading">■ ② 今週の期限タスク / ③ 進行中プロジェクトのビュー</h4>
+    <p>同様の手順で作成します。Position は <code>ref</code>(ダッシュボードへの組み込み用)にします。</p>
+    <h4 class="sub-heading">■ ダッシュボードに追加する場合</h4>
+    <p>第5章で作成した管理者ダッシュボードに、これらのビューを追加できます。</p>
+    <div class="procedure">
+      <div class="proc-step"><div class="proc-num">1</div><div class="proc-body"><p><strong>📱 Views → 管理者ダッシュボード</strong> を開きます。</p></div></div>
+      <div class="proc-step"><div class="proc-num">2</div><div class="proc-body"><p><strong>View Options → View entries</strong> で <strong>Add</strong> をクリックし、追加したいビュー(例: 今週の期限タスク)を選択します。</p></div></div>
+      <div class="proc-step"><div class="proc-num">3</div><div class="proc-body"><p>サイズを選び(Wide / Small など)、<strong>Save</strong> します。</p></div></div>
+    </div>
+    <div class="note-box"><div class="note-title">💡 ダッシュボードが大きくなりすぎた場合</div>ビューを追加しすぎるとダッシュボードが見づらくなります。その場合は、<strong>ダッシュボードを2つに分ける</strong>(例:「管理者ダッシュボード(全体)」「管理者ダッシュボード(タスク詳細)」)か、あまり使わないビューの Position を <code>ref</code> から <code>menu</code> に変えて、独立したメニュー項目にする方法もあります。</div>
+
+    <h3 class="section-heading" id="sec7-6"><span class="sec-num">7-6</span> 動作確認とまとめ</h3>
+    <h4 class="sub-heading">■ 確認チェックリスト</h4>
+    <ul class="checklist">
+      <li><strong>マイタスク</strong> Slice が作成され、ログインユーザーの未完了タスクのみ表示される</li>
+      <li><strong>今週の期限タスク</strong> Slice が作成され、残日数0〜7のタスクのみ表示される</li>
+      <li><strong>進行中プロジェクト</strong> Slice が作成され、計画中・進行中のプロジェクトのみ表示される</li>
+      <li>マイタスクビュー(table)が下部メニューに表示されている</li>
+      <li>今週の期限タスク / 進行中プロジェクトのビューが作成されている(Position = ref)</li>
+      <li>マイタスクビューの For this data が、テーブルではなく <strong>Slice</strong> になっている</li>
+    </ul>
+
+    <h4 class="sub-heading">■ アプリ全体の Slice 一覧(本章 + 第5章)</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:50px;">No.</th><th style="width:190px;">Slice名</th><th style="width:110px;">テーブル</th><th style="width:200px;">条件式(要約)</th><th>作成した章</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">期限超過タスク</td><td>タスク</td><td style="text-align:left;"><code>残日数 &lt; 0 AND 未完了</code></td><td>第5章</td></tr>
+        <tr><td>2</td><td style="text-align:left;">マイタスク</td><td>タスク</td><td style="text-align:left;"><code>担当者 = USEREMAIL() AND 未完了</code></td><td>第7章</td></tr>
+        <tr><td>3</td><td style="text-align:left;">今週の期限タスク</td><td>タスク</td><td style="text-align:left;"><code>残日数 0〜7 AND 未完了</code></td><td>第7章</td></tr>
+        <tr><td>4</td><td style="text-align:left;">進行中プロジェクト</td><td>プロジェクト</td><td style="text-align:left;"><code>計画中 OR 進行中</code></td><td>第7章</td></tr>
+      </tbody>
+    </table>
+    <h4 class="sub-heading">■ 第7章のまとめ(中級編との違い)</h4>
+    <table class="data-table left-align">
+      <thead><tr><th style="width:60px;">No.</th><th style="width:260px;">上級編で新しく扱ったポイント</th><th>使った仕組み</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td style="text-align:left;">ユーザー連動のSlice</td><td><code>USEREMAIL()</code> で動的にフィルタ</td></tr>
+        <tr><td>2</td><td style="text-align:left;">日付ベースの動的フィルタ</td><td>Virtual Column <code>[残日数]</code> を条件に活用</td></tr>
+        <tr><td>3</td><td style="text-align:left;">既存Sliceとの棲み分け</td><td>期限超過(第5章)と今週の期限(本章)の条件を排他設計</td></tr>
+        <tr><td>4</td><td style="text-align:left;">OR条件のSlice設計</td><td>「見せたいものだけ明示」の安全設計</td></tr>
+        <tr><td>5</td><td style="text-align:left;">Sliceベースビューの配置</td><td>For this data で Slice を選択 / Position の使い分け</td></tr>
+      </tbody>
+    </table>
+    <div class="point-box"><div class="point-title">💡 POINT ─ この章の学びを振り返り</div>上級編のSliceは、<strong>USEREMAIL()やVirtual Columnと組み合わせることで、ユーザーや日付に応じて動的に変化するフィルタ</strong>を実現しました。中級編の「固定条件の絞り込み」から一歩進んだ、<strong>「使う人によって見えるデータが変わる」</strong>アプリへの進化です。次の第8章では、<strong>パフォーマンス最適化と運用設計</strong>を扱い、実務で安定して使えるアプリに仕上げます。</div>
+    <div class="warn-box"><div class="warn-title">⚠️ 次の章に進む前に</div>マイタスクビューの For this data が <strong>Slice</strong> になっていること、<strong>テーブル</strong> になっていないことを再確認してください。よくある間違いの1つです。</div>
+
+    <nav class="page-nav">
+      <a href="chapter06.html">← 第6章:条件付き書式とUXの仕上げ</a>
+      <a href="chapter08.html">第8章:パフォーマンス最適化と運用設計 →</a>
+    </nav>
+  </main>
+  <footer class="site-footer">AppSheet 上級編 マニュアル ─ 社内限定 ─ 最終更新:2026年4月</footer>
+</div>
+</body>
+</html>
